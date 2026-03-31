@@ -153,7 +153,7 @@ export function Contact() {
                   type="submit"
                   className="w-full bg-orange-500 text-white px-8 py-3 rounded-lg hover:bg-orange-600 transition-colors"
                 >
-                  Submit Inquiry
+                  Submit
                 </button>
               </form>
             </div>
@@ -234,15 +234,20 @@ export function Contact() {
         </div>
       </section>
 
-      {/* Map Placeholder */}
       <section className="py-16 bg-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gray-200 rounded-lg h-96 flex items-center justify-center">
-            <div className="text-center">
-              <MapPin className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <p className="text-gray-600 text-xl">Interactive Map</p>
-              <p className="text-gray-500">Find our offices near you</p>
-            </div>
+          <div className="rounded-lg overflow-hidden bg-white shadow-sm border border-gray-200">
+            <iframe
+              title="PT Trans Indonesia Superkoridor"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d507761.1867140049!2d106.33336626562499!3d-6.146242500000001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f5e3004a2827%3A0x5816a1b75482fc69!2sPT%20Trans%20Indonesia%20Superkoridor!5e0!3m2!1sid!2sid!4v1774924658936!5m2!1sid!2sid"
+              width="600"
+              height="450"
+              className="w-full h-96 md:h-[450px]"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
           </div>
         </div>
       </section>
