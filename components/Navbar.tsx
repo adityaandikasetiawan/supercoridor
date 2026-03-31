@@ -18,7 +18,14 @@ export function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-10 text-sm">
             <div className="hidden md:flex items-center space-x-4">
-              <span className="text-gray-900 cursor-pointer hover:text-orange-600">Personal</span>
+              <a
+                href="https://idplay.co.id"
+                target="_blank"
+                rel="noreferrer"
+                className="text-gray-900 hover:text-orange-600"
+              >
+                Personal
+              </a>
               <span className="text-gray-400">|</span>
               <span className="text-orange-600 font-medium">Business</span>
             </div>
