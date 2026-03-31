@@ -239,7 +239,7 @@ export function Contact() {
           <div className="rounded-lg overflow-hidden bg-white shadow-sm border border-gray-200">
             <iframe
               title="PT Trans Indonesia Superkoridor"
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d507761.1867140049!2d106.33336626562499!3d-6.146242500000001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f5e3004a2827%3A0x5816a1b75482fc69!2sPT%20Trans%20Indonesia%20Superkoridor!5e0!3m2!1sid!2sid!4v1774924658936!5m2!1sid!2sid"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.884271203159!2d106.893669!3d-6.1462425!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f5e3004a2827%3A0x5816a1b75482fc69!2sPT%20Trans%20Indonesia%20Superkoridor!5e0!3m2!1sid!2sid!4v1774924846436!5m2!1sid!2sid"
               width="600"
               height="450"
               className="w-full h-96 md:h-[450px]"
