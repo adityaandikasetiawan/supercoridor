@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Plus, Edit, Trash2, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
 interface FAQ {
   id: string;
@@ -44,6 +45,37 @@ export function AdminResourcesFAQ() {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch('/api/admin/content/resources/faq');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data?.ok && Array.isArray(data.faqs)) {
+          setFaqs(data.faqs);
+        }
+      } catch (err) {
+        void err;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const persistFaqs = async (nextFaqs: FAQ[]) => {
+    try {
+      await apiFetch('/api/admin/content/resources/faq', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ faqs: nextFaqs }),
+      });
+    } catch (err) {
+      void err;
+    }
+  };
+
   const [formData, setFormData] = useState({
     question: '',
     answer: '',
@@ -69,19 +101,24 @@ export function AdminResourcesFAQ() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let nextFaqs: FAQ[];
     if (editingFAQ) {
-      setFaqs(faqs.map((f) => (f.id === editingFAQ.id ? { ...formData, id: f.id } : f)));
+      nextFaqs = faqs.map((f) => (f.id === editingFAQ.id ? { ...formData, id: f.id } : f));
     } else {
-      setFaqs([...faqs, { ...formData, id: Date.now().toString() }]);
+      nextFaqs = [...faqs, { ...formData, id: Date.now().toString() }];
     }
+    setFaqs(nextFaqs);
+    await persistFaqs(nextFaqs);
     setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this FAQ?')) {
-      setFaqs(faqs.filter((f) => f.id !== id));
+      const nextFaqs = faqs.filter((f) => f.id !== id);
+      setFaqs(nextFaqs);
+      await persistFaqs(nextFaqs);
     }
   };
 

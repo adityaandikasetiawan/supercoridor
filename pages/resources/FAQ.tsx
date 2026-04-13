@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
-const faqs = [
+const fallbackFaqSections = [
   {
     category: 'General',
     color: 'orange',
@@ -78,6 +79,47 @@ const faqs = [
 
 export function FAQ() {
   const [openQuestion, setOpenQuestion] = useState<string | null>(null);
+  const [faqSections, setFaqSections] = useState(fallbackFaqSections);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch('/api/content/resources/faq');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data?.ok || !Array.isArray(data.faqs)) return;
+
+        const byCategory = new Map<string, { q: string; a: string }[]>();
+        for (const item of data.faqs) {
+          if (!item || typeof item !== 'object') continue;
+          const category = typeof item.category === 'string' ? item.category : null;
+          const q = typeof item.question === 'string' ? item.question : null;
+          const a = typeof item.answer === 'string' ? item.answer : null;
+          if (!category || !q || !a) continue;
+          const arr = byCategory.get(category) ?? [];
+          arr.push({ q, a });
+          byCategory.set(category, arr);
+        }
+
+        const colors: Array<'orange' | 'blue' | 'green'> = ['orange', 'blue', 'green'];
+        const nextSections = Array.from(byCategory.entries()).map(([category, questions], index) => ({
+          category,
+          color: colors[index % colors.length],
+          questions,
+        }));
+
+        if (!cancelled && nextSections.length > 0) {
+          setFaqSections(nextSections);
+        }
+      } catch (err) {
+        void err;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const toggleQuestion = (category: string, index: number) => {
     const key = `${category}-${index}`;
@@ -101,7 +143,7 @@ export function FAQ() {
       {/* FAQ Content */}
       <section className="py-20 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          {faqs.map((section, sectionIndex) => (
+          {faqSections.map((section, sectionIndex) => (
             <div key={sectionIndex} className="mb-12">
               <h2
                 className={`text-2xl mb-6 ${

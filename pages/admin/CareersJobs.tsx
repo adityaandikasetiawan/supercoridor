@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Plus, Edit, Trash2, Search, MapPin, Briefcase, Clock } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
 interface Job {
   id: string;
@@ -58,6 +59,37 @@ export function AdminCareersJobs() {
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch('/api/admin/content/careers/jobs');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data?.ok && Array.isArray(data.jobs)) {
+          setJobs(data.jobs);
+        }
+      } catch (err) {
+        void err;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const persistJobs = async (nextJobs: Job[]) => {
+    try {
+      await apiFetch('/api/admin/content/careers/jobs', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jobs: nextJobs }),
+      });
+    } catch (err) {
+      void err;
+    }
+  };
+
   const [formData, setFormData] = useState({
     title: '',
     department: '',
@@ -93,19 +125,24 @@ export function AdminCareersJobs() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let nextJobs: Job[];
     if (editingJob) {
-      setJobs(jobs.map((j) => (j.id === editingJob.id ? { ...formData, id: j.id } : j)));
+      nextJobs = jobs.map((j) => (j.id === editingJob.id ? { ...formData, id: j.id } : j));
     } else {
-      setJobs([...jobs, { ...formData, id: Date.now().toString() }]);
+      nextJobs = [...jobs, { ...formData, id: Date.now().toString() }];
     }
+    setJobs(nextJobs);
+    await persistJobs(nextJobs);
     setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this job posting?')) {
-      setJobs(jobs.filter((j) => j.id !== id));
+      const nextJobs = jobs.filter((j) => j.id !== id);
+      setJobs(nextJobs);
+      await persistJobs(nextJobs);
     }
   };
 

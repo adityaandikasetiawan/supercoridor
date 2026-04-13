@@ -4,37 +4,30 @@ import { Cable, MapPin, Calendar, Zap, Shield, Globe, ArrowRight } from 'lucide-
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 
 export function TGCSProject() {
-  const [tgcsData, setTgcsData] = useState(() => {
-    const saved = localStorage.getItem('tgcs_data');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return {
-      hero: {
-        title: 'SuperCorridor TGCS',
-        subtitle: 'Trans Gunung Cyber Subsea Cable System',
-        description: 'A state-of-the-art submarine cable system connecting strategic locations across Indonesia with world-class reliability and capacity.',
-        enabled: true,
-      },
-      statistics: {
-        cableLength: '1,200+ KM',
-        fiberPairs: '12',
-        capacity: '40 Tbps',
-        rfsSchedule: 'Q2 2025',
-      },
-    };
-  });
+  const [tgcsData, setTgcsData] = useState(() => ({
+    hero: {
+      title: 'SuperCorridor TGCS',
+      subtitle: 'Trans Gunung Cyber Subsea Cable System',
+      description:
+        'A state-of-the-art submarine cable system connecting strategic locations across Indonesia with world-class reliability and capacity.',
+      enabled: true,
+    },
+    statistics: {
+      cableLength: '1,200+ KM',
+      fiberPairs: '12',
+      capacity: '40 Tbps',
+      rfsSchedule: 'Q2 2025',
+    },
+  }));
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      const saved = localStorage.getItem('tgcs_data');
-      if (saved) {
-        setTgcsData(JSON.parse(saved));
-      }
+    const load = async () => {
+      const response = await fetch('/api/content/tgcs');
+      if (!response.ok) return;
+      const data = (await response.json()) as { ok: true; tgcs: typeof tgcsData };
+      setTgcsData(data.tgcs);
     };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    void load();
   }, []);
 
   return (

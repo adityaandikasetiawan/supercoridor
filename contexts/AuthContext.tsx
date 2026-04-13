@@ -1,9 +1,9 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<LoginResult>;
   logout: () => void;
 }
 
@@ -14,43 +14,134 @@ interface User {
   role: string;
 }
 
+type LoginResult =
+  | { ok: true }
+  | { ok: false; error: 'INVALID_CREDENTIALS' | 'LOCKED' | 'NOT_CONFIGURED'; lockUntil?: number };
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+const LOGOUT_BROADCAST_KEY = 'admin_logout_broadcast';
+
+function getCookieValue(name: string) {
+  const encoded = encodeURIComponent(name) + '=';
+  const parts = document.cookie.split(';');
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith(encoded)) {
+      return decodeURIComponent(trimmed.slice(encoded.length));
+    }
+  }
+  return null;
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
-  // Check if user is already logged in on mount
-  useEffect(() => {
-    const storedUser = localStorage.getItem('admin_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      setIsAuthenticated(true);
-    }
-  }, []);
+  const apiFetch = useCallback(
+    async (input: RequestInfo | URL, init?: RequestInit, attemptRefresh = true): Promise<Response> => {
+      const method = (init?.method ?? 'GET').toUpperCase();
+      let csrfToken =
+        method === 'GET' || method === 'HEAD' || method === 'OPTIONS' ? null : getCookieValue('csrf_token');
+      if (!csrfToken && method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+        await fetch('/api/auth/csrf', { method: 'GET', credentials: 'include' });
+        csrfToken = getCookieValue('csrf_token');
+      }
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // Demo credentials - in production, this should call an API
-    if (email === 'admin@supercorridor.com' && password === 'admin123') {
-      const userData: User = {
-        id: '1',
-        email: email,
-        name: 'Admin User',
-        role: 'admin',
-      };
-      setUser(userData);
-      setIsAuthenticated(true);
-      localStorage.setItem('admin_user', JSON.stringify(userData));
-      return true;
-    }
-    return false;
-  };
+      const response = await fetch(input, {
+        ...init,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+          ...(init?.headers ?? {}),
+        },
+      });
 
-  const logout = () => {
+      if (response.status !== 401 || !attemptRefresh) return response;
+
+      const refreshCsrfToken = getCookieValue('csrf_token');
+      const refreshResponse = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          ...(refreshCsrfToken ? { 'x-csrf-token': refreshCsrfToken } : {}),
+        },
+      });
+
+      if (!refreshResponse.ok) return response;
+
+      return apiFetch(input, init, false);
+    },
+    []
+  );
+
+  const logout = useCallback(() => {
+    void apiFetch('/api/auth/logout', { method: 'POST' }, false);
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem('admin_user');
-  };
+    localStorage.setItem(LOGOUT_BROADCAST_KEY, String(Date.now()));
+  }, [apiFetch]);
+
+  useEffect(() => {
+    void fetch('/api/auth/csrf', { method: 'GET', credentials: 'include' });
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === LOGOUT_BROADCAST_KEY) {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  useEffect(() => {
+    const loadMe = async () => {
+      const response = await apiFetch('/api/auth/me', { method: 'GET' }, false);
+      if (!response.ok) {
+        setUser(null);
+        setIsAuthenticated(false);
+        return;
+      }
+
+      const data = (await response.json()) as { ok: true; user: User };
+      setUser(data.user);
+      setIsAuthenticated(true);
+    };
+    void loadMe();
+  }, [apiFetch]);
+
+  const login = useCallback(
+    async (email: string, password: string): Promise<LoginResult> => {
+      const response = await apiFetch('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+
+      const body = (await response.json().catch(() => null)) as
+        | { ok: true; user: User }
+        | { ok: false; error: 'INVALID_CREDENTIALS' | 'LOCKED' | 'NOT_CONFIGURED'; lockUntil?: number }
+        | null;
+
+      if (response.ok && body && body.ok) {
+        setUser(body.user);
+        setIsAuthenticated(true);
+        return { ok: true };
+      }
+
+      if (response.status === 423 && body && !body.ok && body.error === 'LOCKED') {
+        return { ok: false, error: 'LOCKED', lockUntil: body.lockUntil };
+      }
+
+      if (response.status === 500 && body && !body.ok && body.error === 'NOT_CONFIGURED') {
+        return { ok: false, error: 'NOT_CONFIGURED' };
+      }
+
+      return { ok: false, error: 'INVALID_CREDENTIALS' };
+    },
+    [apiFetch]
+  );
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>

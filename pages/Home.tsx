@@ -15,67 +15,72 @@ interface HeroSlide {
 }
 
 export function Home() {
-  const [heroSlides] = useState<HeroSlide[]>(() => {
-    const saved = localStorage.getItem('hero_slides');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return [
-      {
-        id: 1,
-        title: 'Empowering Business Connectivity',
-        subtitle: 'Across Indonesia',
-        description: 'Enterprise-grade internet solutions with 99.99% uptime guarantee',
-        ctaText: 'Get Started',
-        ctaLink: '/contact',
-        backgroundImage: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80',
-        order: 1,
-      },
-      {
-        id: 2,
-        title: 'Ultra-Fast Fiber Network',
-        subtitle: 'Nationwide Coverage',
-        description: 'Connect your business with speeds up to 100Gbps',
-        ctaText: 'Explore Solutions',
-        ctaLink: '/solutions/dedicated-connectivity',
-        backgroundImage: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1920&q=80',
-        order: 2,
-      },
-      {
-        id: 3,
-        title: 'Enterprise Security',
-        subtitle: '24/7 Protection',
-        description: 'Advanced DDoS protection and network monitoring',
-        ctaText: 'Learn More',
-        ctaLink: '/solutions/value-added-services',
-        backgroundImage: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1920&q=80',
-        order: 3,
-      },
-    ];
-  });
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => [
+    {
+      id: 1,
+      title: 'Empowering Business Connectivity',
+      subtitle: 'Across Indonesia',
+      description: 'Enterprise-grade internet solutions with 99.99% uptime guarantee',
+      ctaText: 'Get Started',
+      ctaLink: '/contact',
+      backgroundImage: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80',
+      order: 1,
+    },
+    {
+      id: 2,
+      title: 'Ultra-Fast Fiber Network',
+      subtitle: 'Nationwide Coverage',
+      description: 'Connect your business with speeds up to 100Gbps',
+      ctaText: 'Explore Solutions',
+      ctaLink: '/solutions/dedicated-connectivity',
+      backgroundImage: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1920&q=80',
+      order: 2,
+    },
+    {
+      id: 3,
+      title: 'Enterprise Security',
+      subtitle: '24/7 Protection',
+      description: 'Advanced DDoS protection and network monitoring',
+      ctaText: 'Learn More',
+      ctaLink: '/solutions/value-added-services',
+      backgroundImage: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1920&q=80',
+      order: 3,
+    },
+  ]);
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [activeTab, setActiveTab] = useState<'small' | 'enterprise'>('small');
-  const [tgcsData] = useState(() => {
-    const saved = localStorage.getItem('tgcs_data');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return {
-      hero: {
-        title: 'SuperCorridor TGCS',
-        subtitle: 'Trans Gunung Cyber Subsea Cable System',
-        description: 'A state-of-the-art submarine cable system connecting strategic locations across Indonesia with world-class reliability and capacity.',
-        enabled: true,
-      },
-      statistics: {
-        cableLength: '1,200+ KM',
-        fiberPairs: '12',
-        capacity: '40 Tbps',
-        rfsSchedule: 'Q2 2025',
-      },
+  const [tgcsData, setTgcsData] = useState(() => ({
+    hero: {
+      title: 'SuperCorridor TGCS',
+      subtitle: 'Trans Gunung Cyber Subsea Cable System',
+      description:
+        'A state-of-the-art submarine cable system connecting strategic locations across Indonesia with world-class reliability and capacity.',
+      enabled: true,
+    },
+    statistics: {
+      cableLength: '1,200+ KM',
+      fiberPairs: '12',
+      capacity: '40 Tbps',
+      rfsSchedule: 'Q2 2025',
+    },
+  }));
+
+  useEffect(() => {
+    const load = async () => {
+      const [slidesRes, tgcsRes] = await Promise.all([fetch('/api/content/hero-slides'), fetch('/api/content/tgcs')]);
+      if (slidesRes.ok) {
+        const data = (await slidesRes.json()) as { ok: true; heroSlides: HeroSlide[] };
+        setHeroSlides(data.heroSlides);
+        setCurrentSlide((prev) => Math.min(prev, Math.max(data.heroSlides.length - 1, 0)));
+      }
+      if (tgcsRes.ok) {
+        const data = (await tgcsRes.json()) as { ok: true; tgcs: typeof tgcsData };
+        setTgcsData(data.tgcs);
+      }
     };
-  });
+    void load();
+  }, []);
 
   // Auto-play carousel
   useEffect(() => {

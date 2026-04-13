@@ -10,6 +10,7 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const isDev = Boolean((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,14 +18,21 @@ export function Login() {
     setLoading(true);
 
     try {
-      const success = await login(email, password);
-      if (success) {
+      const result = await login(email, password);
+      if (result.ok) {
         navigate('/admin/dashboard');
       } else {
-        setError('Invalid email or password');
+        if (result.error === 'LOCKED' && result.lockUntil) {
+          const minutesLeft = Math.max(1, Math.ceil((result.lockUntil - Date.now()) / 60000));
+          setError(`Terlalu banyak percobaan login. Coba lagi dalam ${minutesLeft} menit.`);
+        } else if (result.error === 'NOT_CONFIGURED') {
+          setError('Login admin belum dikonfigurasi untuk production.');
+        } else {
+          setError('Email atau password salah.');
+        }
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -93,13 +101,15 @@ export function Login() {
           </button>
         </form>
 
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-2">Demo Credentials:</p>
-          <p className="text-sm">
-            <strong>Email:</strong> admin@supercorridor.com<br />
-            <strong>Password:</strong> admin123
-          </p>
-        </div>
+        {isDev && (
+          <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600 mb-2">Demo Credentials:</p>
+            <p className="text-sm">
+              <strong>Email:</strong> admin@supercorridor.com<br />
+              <strong>Password:</strong> admin123
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,34 +1,47 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Save, Eye, EyeOff } from 'lucide-react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { toast } from 'sonner';
+import { apiFetch } from '../../utils/storage';
 
 export function AdminTGCSManagement() {
-  const [tgcsData, setTgcsData] = useState(() => {
-    const saved = localStorage.getItem('tgcs_data');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return {
-      hero: {
-        title: 'SuperCorridor TGCS',
-        subtitle: 'Trans Gunung Cyber Subsea Cable System',
-        description: 'A state-of-the-art submarine cable system connecting strategic locations across Indonesia with world-class reliability and capacity.',
-        enabled: true,
-      },
-      statistics: {
-        cableLength: '1,200+ KM',
-        fiberPairs: '12',
-        capacity: '40 Tbps',
-        rfsSchedule: 'Q2 2025',
-      },
-    };
-  });
+  const [tgcsData, setTgcsData] = useState(() => ({
+    hero: {
+      title: 'SuperCorridor TGCS',
+      subtitle: 'Trans Gunung Cyber Subsea Cable System',
+      description:
+        'A state-of-the-art submarine cable system connecting strategic locations across Indonesia with world-class reliability and capacity.',
+      enabled: true,
+    },
+    statistics: {
+      cableLength: '1,200+ KM',
+      fiberPairs: '12',
+      capacity: '40 Tbps',
+      rfsSchedule: 'Q2 2025',
+    },
+  }));
 
-  const handleSave = () => {
-    localStorage.setItem('tgcs_data', JSON.stringify(tgcsData));
-    window.dispatchEvent(new Event('storage'));
-    toast.success('TGCS data saved successfully!');
+  useEffect(() => {
+    const load = async () => {
+      const response = await apiFetch('/api/admin/content/tgcs', { method: 'GET' });
+      if (!response.ok) return;
+      const data = (await response.json()) as { ok: true; tgcs: typeof tgcsData };
+      setTgcsData(data.tgcs);
+    };
+    void load();
+  }, []);
+
+  const handleSave = async () => {
+    const response = await apiFetch('/api/admin/content/tgcs', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tgcs: tgcsData }),
+    });
+    if (response.ok) {
+      toast.success('TGCS data saved successfully!');
+      return;
+    }
+    toast.error('Failed to save TGCS data.');
   };
 
   const toggleEnabled = () => {

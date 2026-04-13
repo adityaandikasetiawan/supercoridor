@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { ArrowRight, TrendingUp, Shield, Zap } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
-const caseStudies = [
+const fallbackCaseStudies = [
   {
     client: 'Global Financial Services Corp',
     industry: 'Financial Services',
@@ -43,6 +45,57 @@ const caseStudies = [
 ];
 
 export function CaseStudies() {
+  const [caseStudies, setCaseStudies] = useState(fallbackCaseStudies);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch('/api/content/resources/case-studies');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data?.ok || !Array.isArray(data.caseStudies)) return;
+
+        const colors: Array<'orange' | 'blue' | 'green'> = ['orange', 'blue', 'green'];
+        const icons = [TrendingUp, Shield, Zap] as const;
+        const next = data.caseStudies
+          .filter((cs: any) => cs && typeof cs === 'object')
+          .map((cs: any, index: number) => {
+            const client = typeof cs.client === 'string' ? cs.client : '';
+            const industry = typeof cs.industry === 'string' ? cs.industry : '';
+            const challenge = typeof cs.challenge === 'string' ? cs.challenge : '';
+            const solution = typeof cs.solution === 'string' ? cs.solution : '';
+            const resultsRaw = typeof cs.results === 'string' ? cs.results : '';
+            const results = resultsRaw
+              ? resultsRaw
+                  .split(',')
+                  .map((r: string) => r.trim())
+                  .filter(Boolean)
+              : [];
+            return {
+              client,
+              industry,
+              challenge,
+              solution,
+              results: results.length > 0 ? results : ['Learn more about results'],
+              icon: icons[index % icons.length],
+              color: colors[index % colors.length],
+            };
+          })
+          .filter((cs: any) => cs.client && cs.industry);
+
+        if (!cancelled && next.length > 0) {
+          setCaseStudies(next);
+        }
+      } catch (err) {
+        void err;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div>
       {/* Hero */}

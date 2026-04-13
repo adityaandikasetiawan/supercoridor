@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Search, MapPin, Briefcase, Clock, Users, ArrowRight, TrendingUp, Heart, Star, Filter } from 'lucide-react';
+import { apiFetch } from '../utils/storage';
 
-const jobListings = [
+const fallbackJobListings = [
   {
     id: 1,
     title: 'Senior Network Engineer',
@@ -125,15 +126,90 @@ const jobListings = [
 ];
 
 export function Careers() {
+  const [jobListings, setJobListings] = useState(fallbackJobListings);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  const departments = ['All Departments', 'Engineering', 'Sales', 'Customer Support', 'Operations', 'Pre-Sales', 'Security'];
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch('/api/content/careers/jobs');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data?.ok || !Array.isArray(data.jobs)) return;
+
+        const now = new Date();
+        const deriveLevel = (title: string) => {
+          const t = title.toLowerCase();
+          if (t.includes('senior') || t.includes('lead') || t.includes('principal')) return 'Senior';
+          if (t.includes('junior') || t.includes('entry')) return 'Entry-Mid';
+          return 'Mid-Senior';
+        };
+
+        const next = data.jobs
+          .filter((j: any) => j && typeof j === 'object')
+          .map((j: any, index: number) => {
+            const posted = typeof j.posted === 'string' ? j.posted : '';
+            const postedDate = posted ? new Date(posted) : null;
+            const postedDays =
+              postedDate && !Number.isNaN(postedDate.getTime())
+                ? Math.max(0, Math.floor((now.getTime() - postedDate.getTime()) / (24 * 60 * 60 * 1000)))
+                : 0;
+
+            const title = typeof j.title === 'string' ? j.title : '';
+            const requirements = Array.isArray(j.requirements) ? j.requirements.filter((r: any) => typeof r === 'string') : [];
+            const responsibilities = Array.isArray(j.responsibilities)
+              ? j.responsibilities.filter((r: any) => typeof r === 'string')
+              : [];
+            const skills = requirements.length > 0 ? requirements : responsibilities;
+
+            return {
+              id: typeof j.id === 'string' ? j.id : String(index + 1),
+              title,
+              department: typeof j.department === 'string' ? j.department : '',
+              location: typeof j.location === 'string' ? j.location : '',
+              type: typeof j.type === 'string' ? j.type : '',
+              level: deriveLevel(title),
+              salary: typeof j.salary === 'string' ? j.salary : '',
+              description: typeof j.description === 'string' ? j.description : '',
+              requirements,
+              skills,
+              featured: index < 2,
+              applicants: 0,
+              postedDays,
+            };
+          })
+          .filter((j: any) => j.title && j.department && j.location && j.type);
+
+        if (!cancelled && next.length > 0) {
+          setJobListings(next);
+        }
+      } catch (err) {
+        void err;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const departments = useMemo(() => {
+    const set = new Set<string>();
+    for (const job of jobListings) set.add(job.department);
+    return ['All Departments', ...Array.from(set).sort()];
+  }, [jobListings]);
+
   const locations = ['All Locations', 'Jakarta', 'Surabaya', 'Remote'];
-  const types = ['All Types', 'Full-time', 'Shift Work'];
+
+  const types = useMemo(() => {
+    const set = new Set<string>();
+    for (const job of jobListings) set.add(job.type);
+    return ['All Types', ...Array.from(set).sort()];
+  }, [jobListings]);
 
   const filteredJobs = jobListings.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

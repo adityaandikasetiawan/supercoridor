@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { Calendar, ArrowRight } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
-const articles = [
+const fallbackArticles = [
   {
     title: '5 Key Benefits of Dedicated Internet Connectivity for Enterprises',
     date: 'December 15, 2025',
@@ -46,6 +48,48 @@ const articles = [
 ];
 
 export function Insights() {
+  const [articles, setArticles] = useState(fallbackArticles);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch('/api/content/resources/insights');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data?.ok || !Array.isArray(data.articles)) return;
+
+        const colors: Array<'orange' | 'blue' | 'green'> = ['orange', 'blue', 'green'];
+        const next = data.articles
+          .filter((a: any) => a && typeof a === 'object')
+          .map((a: any, index: number) => {
+            const title = typeof a.title === 'string' ? a.title : '';
+            const excerpt = typeof a.excerpt === 'string' ? a.excerpt : '';
+            const category = typeof a.category === 'string' ? a.category : '';
+            const rawDate = typeof a.date === 'string' ? a.date : '';
+            const date = rawDate
+              ? new Date(rawDate).toLocaleDateString(undefined, {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })
+              : '';
+            return { title, date, category, excerpt, color: colors[index % colors.length] };
+          })
+          .filter((a: any) => a.title && a.category);
+
+        if (!cancelled && next.length > 0) {
+          setArticles(next);
+        }
+      } catch (err) {
+        void err;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div>
       {/* Hero */}

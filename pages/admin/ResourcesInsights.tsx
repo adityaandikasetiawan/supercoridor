@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
 interface Article {
   id: string;
@@ -44,6 +45,37 @@ export function AdminResourcesInsights() {
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch('/api/admin/content/resources/insights');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data?.ok && Array.isArray(data.articles)) {
+          setArticles(data.articles);
+        }
+      } catch (err) {
+        void err;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const persistArticles = async (nextArticles: Article[]) => {
+    try {
+      await apiFetch('/api/admin/content/resources/insights', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ articles: nextArticles }),
+      });
+    } catch (err) {
+      void err;
+    }
+  };
+
   const [formData, setFormData] = useState({
     title: '',
     excerpt: '',
@@ -75,21 +107,26 @@ export function AdminResourcesInsights() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let nextArticles: Article[];
     if (editingArticle) {
-      setArticles(
-        articles.map((a) => (a.id === editingArticle.id ? { ...formData, id: a.id } : a))
+      nextArticles = articles.map((a) =>
+        a.id === editingArticle.id ? { ...formData, id: a.id } : a
       );
     } else {
-      setArticles([...articles, { ...formData, id: Date.now().toString() }]);
+      nextArticles = [...articles, { ...formData, id: Date.now().toString() }];
     }
+    setArticles(nextArticles);
+    await persistArticles(nextArticles);
     setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this article?')) {
-      setArticles(articles.filter((a) => a.id !== id));
+      const nextArticles = articles.filter((a) => a.id !== id);
+      setArticles(nextArticles);
+      await persistArticles(nextArticles);
     }
   };
 

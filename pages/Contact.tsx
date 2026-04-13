@@ -203,9 +203,9 @@ export function Contact() {
                   <div>
                     <h3 className="mb-2">Business Hours</h3>
                     <p className="text-gray-600">
-                      Monday - Friday: 8:00 AM - 6:00 PM<br />
-                      Saturday: 9:00 AM - 1:00 PM<br />
-                      Support: 24/7/365
+                      Monday - Friday: 8:00 AM - 5:00 PM<br />
+                      {/* Saturday: 9:00 AM - 1:00 PM<br /> */}
+                      Support: 24 Hours
                     </p>
                   </div>
                 </div>

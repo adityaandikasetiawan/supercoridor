@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import {
   Search,
@@ -13,6 +13,7 @@ import {
   Calendar,
   FileText,
 } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
 interface Application {
   id: string;
@@ -83,15 +84,54 @@ export function AdminCareersApplications() {
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  const handleStatusChange = (id: string, newStatus: Application['status']) => {
-    setApplications(
-      applications.map((app) => (app.id === id ? { ...app, status: newStatus } : app))
-    );
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch('/api/admin/content/careers/applications');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data?.ok && Array.isArray(data.applications)) {
+          setApplications(data.applications);
+        }
+      } catch (err) {
+        void err;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const persistApplications = async (nextApplications: Application[]) => {
+    try {
+      await apiFetch('/api/admin/content/careers/applications', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ applications: nextApplications }),
+      });
+    } catch (err) {
+      void err;
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleStatusChange = async (id: string, newStatus: Application['status']) => {
+    const nextApplications = applications.map((app) =>
+      app.id === id ? { ...app, status: newStatus } : app
+    );
+    setApplications(nextApplications);
+    if (selectedApplication?.id === id) {
+      const updated = nextApplications.find((a) => a.id === id) ?? null;
+      setSelectedApplication(updated);
+    }
+    await persistApplications(nextApplications);
+  };
+
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this application?')) {
-      setApplications(applications.filter((app) => app.id !== id));
+      const nextApplications = applications.filter((app) => app.id !== id);
+      setApplications(nextApplications);
+      await persistApplications(nextApplications);
       if (selectedApplication?.id === id) {
         setIsDetailOpen(false);
       }

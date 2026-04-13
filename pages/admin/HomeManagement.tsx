@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Save, Image as ImageIcon } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
 export function AdminHomeManagement() {
   const [heroData, setHeroData] = useState({
@@ -43,17 +44,41 @@ export function AdminHomeManagement() {
 
   const [isSaved, setIsSaved] = useState(false);
 
-  const handleSaveHero = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Save logic here
+  useEffect(() => {
+    const load = async () => {
+      const response = await apiFetch('/api/admin/content/home-management', { method: 'GET' });
+      if (!response.ok) return;
+      const data = (await response.json()) as {
+        ok: true;
+        homeManagement: { heroData: typeof heroData; stats: typeof stats } | null;
+      };
+      if (!data.homeManagement) return;
+      setHeroData(data.homeManagement.heroData);
+      setStats(data.homeManagement.stats);
+    };
+    void load();
+  }, []);
+
+  const saveAll = async () => {
+    const response = await apiFetch('/api/admin/content/home-management', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ homeManagement: { heroData, stats } }),
+    });
+    if (!response.ok) return false;
     setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    window.setTimeout(() => setIsSaved(false), 3000);
+    return true;
   };
 
-  const handleSaveStats = (e: React.FormEvent) => {
+  const handleSaveHero = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    await saveAll();
+  };
+
+  const handleSaveStats = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveAll();
   };
 
   const updateStat = (index: number, field: string, value: string) => {

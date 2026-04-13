@@ -54,10 +54,17 @@ export function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 bg-clip-text text-transparent">
-              SuperCorridor
-            </span>
-            <span className="ml-2 text-sm text-gray-600">business</span>
+            <div className="flex items-baseline">
+              <div className="flex flex-col leading-none">
+                <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 bg-clip-text text-transparent">
+                  SuperCorridor
+                </span>
+                <span className="mt-1 text-[12px] font-semibold tracking-tight bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 bg-clip-text text-transparent">
+                  Your Neutral Network Provider
+                </span>
+              </div>
+              <span className="ml-2 text-sm text-gray-600">business</span>
+            </div>
           </Link>
 
           {/* Desktop Menu - Horizontal */}

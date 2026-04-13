@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
 interface CaseStudy {
   id: string;
@@ -33,6 +34,37 @@ export function AdminResourcesCaseStudies() {
   const [editingStudy, setEditingStudy] = useState<CaseStudy | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch('/api/admin/content/resources/case-studies');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data?.ok && Array.isArray(data.caseStudies)) {
+          setCaseStudies(data.caseStudies);
+        }
+      } catch (err) {
+        void err;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const persistCaseStudies = async (nextCaseStudies: CaseStudy[]) => {
+    try {
+      await apiFetch('/api/admin/content/resources/case-studies', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ caseStudies: nextCaseStudies }),
+      });
+    } catch (err) {
+      void err;
+    }
+  };
+
   const [formData, setFormData] = useState({
     title: '',
     client: '',
@@ -64,21 +96,26 @@ export function AdminResourcesCaseStudies() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let nextCaseStudies: CaseStudy[];
     if (editingStudy) {
-      setCaseStudies(
-        caseStudies.map((cs) => (cs.id === editingStudy.id ? { ...formData, id: cs.id } : cs))
+      nextCaseStudies = caseStudies.map((cs) =>
+        cs.id === editingStudy.id ? { ...formData, id: cs.id } : cs
       );
     } else {
-      setCaseStudies([...caseStudies, { ...formData, id: Date.now().toString() }]);
+      nextCaseStudies = [...caseStudies, { ...formData, id: Date.now().toString() }];
     }
+    setCaseStudies(nextCaseStudies);
+    await persistCaseStudies(nextCaseStudies);
     setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this case study?')) {
-      setCaseStudies(caseStudies.filter((cs) => cs.id !== id));
+      const nextCaseStudies = caseStudies.filter((cs) => cs.id !== id);
+      setCaseStudies(nextCaseStudies);
+      await persistCaseStudies(nextCaseStudies);
     }
   };
 
