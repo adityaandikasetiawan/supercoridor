@@ -124,7 +124,9 @@ async function getSqlDb() {
         if (parsed && typeof parsed === 'object') {
           kvSet(db, 'authStore', JSON.stringify(parsed), nowMs());
         }
-      } catch {}
+      } catch (err) {
+        void err;
+      }
     }
 
     const existingContent = kvGet(db, 'contentStore');
@@ -135,7 +137,9 @@ async function getSqlDb() {
         if (parsed && typeof parsed === 'object') {
           kvSet(db, 'contentStore', JSON.stringify(parsed), nowMs());
         }
-      } catch {}
+      } catch (err) {
+        void err;
+      }
     }
 
     await persistSqlDb(db);
@@ -940,7 +944,8 @@ app.post('/api/auth/logout', async (req, res) => {
         });
       }
     }
-  } catch {
+  } catch (err) {
+    void err;
   }
   clearAuthCookies(res);
   clearCsrfCookie(res);

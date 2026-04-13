@@ -1,15 +1,76 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ChevronDown, LogIn, Search } from 'lucide-react';
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchRef = useRef<HTMLDivElement | null>(null);
+  const navigate = useNavigate();
 
   const toggleDropdown = (menu: string) => {
     setOpenDropdown(openDropdown === menu ? null : menu);
   };
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const searchItems = useMemo(
+    () => [
+      { label: 'Home', to: '/', group: 'General' },
+      { label: 'Network Coverage', to: '/network-coverage', group: 'General' },
+      { label: 'Contact us', to: '/contact', group: 'General' },
+      { label: 'Karir', to: '/careers', group: 'Careers' },
+      { label: 'Dedicated Connectivity', to: '/solutions/dedicated-connectivity', group: 'Solutions' },
+      { label: 'Backbone & Network Infrastructure', to: '/solutions/backbone-network', group: 'Solutions' },
+      { label: 'Cloud & Interconnection Services', to: '/solutions/cloud-interconnection', group: 'Solutions' },
+      { label: 'Value-Added Services', to: '/solutions/value-added-services', group: 'Solutions' },
+      { label: 'Company Overview', to: '/about/company-overview', group: 'About' },
+      { label: 'Vision & Mission', to: '/about/vision-mission', group: 'About' },
+      { label: 'Leadership Team', to: '/about/leadership', group: 'About' },
+      { label: 'Milestones', to: '/about/milestones', group: 'About' },
+      { label: 'Articles & Insights', to: '/resources/insights', group: 'Resources' },
+      { label: 'Case Studies', to: '/resources/case-studies', group: 'Resources' },
+      { label: 'FAQ', to: '/resources/faq', group: 'Resources' },
+      { label: 'TGCS', to: '/tgcs-project', group: 'Projects' },
+    ],
+    [],
+  );
+
+  const filteredSearchItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    const tokens = q.split(/\s+/g).filter(Boolean);
+    return searchItems.filter((item) => {
+      const hay = `${item.label} ${item.group}`.toLowerCase();
+      return tokens.every((t) => hay.includes(t));
+    });
+  }, [searchItems, searchQuery]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeSearch();
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      const el = searchRef.current;
+      if (!el) return;
+      if (e.target instanceof Node && !el.contains(e.target)) closeSearch();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [searchOpen]);
 
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50">
@@ -50,7 +111,7 @@ export function Navbar() {
       </div>
 
       {/* Main Navigation */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center">
@@ -210,7 +271,7 @@ export function Navbar() {
             </Link>
             
             <button
-              onClick={() => setSearchOpen(!searchOpen)}
+              onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
               className="flex items-center text-gray-900 hover:text-orange-600 transition-colors"
             >
               Search SuperCorridor
@@ -229,17 +290,45 @@ export function Navbar() {
 
         {/* Search Bar Dropdown */}
         {searchOpen && (
-          <div className="absolute left-0 right-0 bg-white shadow-lg p-4 border-t">
+          <div ref={searchRef} className="absolute left-0 right-0 bg-white shadow-lg p-4 border-t">
             <div className="max-w-7xl mx-auto">
               <div className="relative">
                 <input
                   type="text"
                   placeholder="What can we help you find today?"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const first = filteredSearchItems[0];
+                      if (!first) return;
+                      closeSearch();
+                      navigate(first.to);
+                    }
+                    if (e.key === 'Escape') closeSearch();
+                  }}
                   className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:border-orange-600 focus:outline-none"
                   autoFocus
                 />
                 <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               </div>
+              {filteredSearchItems.length > 0 && (
+                <div className="mt-3 bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  {filteredSearchItems.slice(0, 8).map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className="block px-4 py-3 hover:bg-orange-50 transition-colors"
+                      onClick={() => closeSearch()}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-900">{item.label}</span>
+                        <span className="text-sm text-gray-500">{item.group}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

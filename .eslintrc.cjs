@@ -10,6 +10,16 @@ module.exports = {
   ignorePatterns: ['dist', 'node_modules'],
   plugins: ['@typescript-eslint', 'react-hooks', 'react-refresh'],
   extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'plugin:react-hooks/recommended'],
+  overrides: [
+    {
+      files: ['*.cjs'],
+      env: { node: true, commonjs: true, es2020: true },
+    },
+    {
+      files: ['server/**/*.{js,mjs,cjs}'],
+      env: { node: true, es2020: true },
+    },
+  ],
   rules: {
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-unused-vars': 'off',

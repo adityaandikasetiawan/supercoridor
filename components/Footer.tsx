@@ -8,9 +8,17 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div>
-            <h3 className="text-xl mb-4 bg-gradient-to-r from-orange-500 via-blue-500 to-green-500 bg-clip-text text-transparent">
-              SuperCorridor
-            </h3>
+            <Link to="/" className="inline-flex items-baseline">
+              <div className="flex flex-col leading-none">
+                <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 bg-clip-text text-transparent">
+                  SuperCorridor
+                </span>
+                <span className="mt-1 text-[12px] font-semibold tracking-tight bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 bg-clip-text text-transparent">
+                  Your Neutral Network Provider
+                </span>
+              </div>
+              <span className="ml-2 text-sm text-gray-400">business</span>
+            </Link>
             <p className="text-gray-400 mb-4">
               Leading provider of enterprise-grade internet connectivity and network solutions.
             </p>
