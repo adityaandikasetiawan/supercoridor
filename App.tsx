@@ -1,5 +1,7 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Layouts
@@ -68,91 +70,341 @@ import { AdminTGCSManagement } from './pages/admin/TGCSManagement';
 
 import { AdminPlaceholder } from './pages/admin/AdminPlaceholder';
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [pathname]);
+
+  return null;
+}
+
+function TitleManager() {
+  const { pathname } = useLocation();
+  const { lang } = useLanguage();
+
+  useEffect(() => {
+    const base = 'SuperCorridor';
+
+    const titleFor = (path: string) => {
+      const id = {
+        '/': 'Beranda',
+        '/network-coverage': 'Cakupan Jaringan',
+        '/contact': 'Hubungi Kami',
+        '/careers': 'Karir',
+        '/customers': 'Pelanggan',
+        '/tgcs-project': 'Proyek TGCS',
+        '/solutions/dedicated-connectivity': 'Konektivitas Dedicated',
+        '/solutions/backbone-network': 'Backbone & Infrastruktur Jaringan',
+        '/solutions/cloud-interconnection': 'Layanan Cloud & Interkoneksi',
+        '/solutions/value-added-services': 'Layanan Nilai Tambah',
+        '/about/company-overview': 'Profil Perusahaan',
+        '/about/vision-mission': 'Visi & Misi',
+        '/about/leadership': 'Tim Kepemimpinan',
+        '/about/milestones': 'Pencapaian',
+        '/resources/insights': 'Artikel & Insight',
+        '/resources/case-studies': 'Studi Kasus',
+        '/resources/faq': 'FAQ',
+        '/admin/login': 'Admin | Masuk',
+        '/admin/dashboard': 'Admin | Dashboard',
+        '/admin/home': 'Admin | Home',
+        '/admin/contact': 'Admin | Contact',
+        '/admin/settings': 'Admin | Settings',
+        '/admin/resources/insights': 'Admin | Resources Insights',
+        '/admin/resources/case-studies': 'Admin | Resources Case Studies',
+        '/admin/resources/faq': 'Admin | Resources FAQ',
+        '/admin/careers/jobs': 'Admin | Careers Jobs',
+        '/admin/careers/applications': 'Admin | Careers Applications',
+        '/admin/customers': 'Admin | Customers',
+        '/admin/solutions/dedicated-connectivity': 'Admin | Dedicated Connectivity',
+        '/admin/solutions/backbone-network': 'Admin | Backbone Network',
+        '/admin/network-coverage': 'Admin | Network Coverage',
+        '/admin/tgcs-management': 'Admin | TGCS Management',
+      } as const;
+
+      const en = {
+        '/': 'Home',
+        '/network-coverage': 'Network Coverage',
+        '/contact': 'Contact',
+        '/careers': 'Careers',
+        '/customers': 'Customers',
+        '/tgcs-project': 'TGCS Project',
+        '/solutions/dedicated-connectivity': 'Dedicated Connectivity',
+        '/solutions/backbone-network': 'Backbone & Network Infrastructure',
+        '/solutions/cloud-interconnection': 'Cloud & Interconnection Services',
+        '/solutions/value-added-services': 'Value-Added Services',
+        '/about/company-overview': 'Company Overview',
+        '/about/vision-mission': 'Vision & Mission',
+        '/about/leadership': 'Leadership Team',
+        '/about/milestones': 'Milestones',
+        '/resources/insights': 'Articles & Insights',
+        '/resources/case-studies': 'Case Studies',
+        '/resources/faq': 'FAQ',
+        '/admin/login': 'Admin | Login',
+        '/admin/dashboard': 'Admin | Dashboard',
+        '/admin/home': 'Admin | Home',
+        '/admin/contact': 'Admin | Contact',
+        '/admin/settings': 'Admin | Settings',
+        '/admin/resources/insights': 'Admin | Resources Insights',
+        '/admin/resources/case-studies': 'Admin | Resources Case Studies',
+        '/admin/resources/faq': 'Admin | Resources FAQ',
+        '/admin/careers/jobs': 'Admin | Careers Jobs',
+        '/admin/careers/applications': 'Admin | Careers Applications',
+        '/admin/customers': 'Admin | Customers',
+        '/admin/solutions/dedicated-connectivity': 'Admin | Dedicated Connectivity',
+        '/admin/solutions/backbone-network': 'Admin | Backbone Network',
+        '/admin/network-coverage': 'Admin | Network Coverage',
+        '/admin/tgcs-management': 'Admin | TGCS Management',
+      } as const;
+
+      if (path.startsWith('/admin') && !(path in en) && !(path in id)) {
+        return lang === 'id' ? 'Admin | SuperCorridor' : 'Admin | SuperCorridor';
+      }
+
+      const label = lang === 'id' ? id[path as keyof typeof id] : en[path as keyof typeof en];
+      return label ?? null;
+    };
+
+    const leaf = titleFor(pathname);
+    document.title = leaf ? `${base} | ${leaf}` : base;
+    document.documentElement.lang = lang;
+  }, [lang, pathname]);
+
+  return null;
+}
+
+function RequireAdminRole({ allowed, children }: { allowed: string[]; children: React.ReactNode }) {
+  const { user } = useAuth();
+  const role = user?.role === 'admin' ? 'super_admin' : user?.role;
+  if (!role || !allowed.includes(role)) return <Navigate to="/admin/dashboard" replace />;
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Admin Routes */}
-          <Route path="/admin/login" element={<Login />} />
-          <Route
-            path="/admin/*"
-            element={
-              <ProtectedRoute>
-                <Routes>
-                  <Route path="dashboard" element={<Dashboard />} />
-                  <Route path="home" element={<AdminHomeManagement />} />
-                  <Route path="contact" element={<ManageContact />} />
-                  <Route path="settings" element={<Settings />} />
-                  
-                  {/* Resources Routes */}
-                  <Route path="resources/insights" element={<AdminResourcesInsights />} />
-                  <Route path="resources/case-studies" element={<AdminResourcesCaseStudies />} />
-                  <Route path="resources/faq" element={<AdminResourcesFAQ />} />
-                  
-                  {/* Careers Routes */}
-                  <Route path="careers/jobs" element={<AdminCareersJobs />} />
-                  <Route path="careers/applications" element={<AdminCareersApplications />} />
-                  
-                  {/* Customers Route */}
-                  <Route path="customers" element={<AdminCustomers />} />
-                  
-                  {/* Solutions Routes */}
-                  <Route path="solutions/dedicated-connectivity" element={<AdminSolutionsDedicatedConnectivity />} />
-                  <Route path="solutions/backbone-network" element={<AdminSolutionsBackboneNetwork />} />
-                  <Route path="solutions/cloud-interconnection" element={<AdminPlaceholder title="Cloud Interconnection Management" description="Content management coming soon. Use similar structure as Dedicated Connectivity" />} />
-                  <Route path="solutions/value-added-services" element={<AdminPlaceholder title="Value-Added Services Management" description="Content management coming soon. Use similar structure as Dedicated Connectivity" />} />
-                  
-                  {/* About Routes */}
-                  <Route path="about/company-overview" element={<AdminAboutCompanyOverview />} />
-                  <Route path="about/vision-mission" element={<AdminAboutVisionMission />} />
-                  <Route path="about/leadership" element={<AdminAboutLeadership />} />
-                  <Route path="about/milestones" element={<AdminPlaceholder title="Milestones Management" description="Timeline and achievements management coming soon" />} />
-                  
-                  {/* Network Coverage Route */}
-                  <Route path="network-coverage" element={<AdminNetworkCoverage />} />
-                  
-                  {/* TGCS Management Route */}
-                  <Route path="tgcs-management" element={<AdminTGCSManagement />} />
-                </Routes>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Public Routes */}
-          <Route
-            path="*"
-            element={
-              <div className="min-h-screen bg-white flex flex-col">
-                <Navbar />
-                <main className="flex-grow">
+      <LanguageProvider>
+        <Router>
+          <ScrollToTop />
+          <TitleManager />
+          <Routes>
+            {/* Admin Routes */}
+            <Route path="/admin/login" element={<Login />} />
+            <Route
+              path="/admin/*"
+              element={
+                <ProtectedRoute>
                   <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/solutions/dedicated-connectivity" element={<DedicatedConnectivity />} />
-                    <Route path="/solutions/backbone-network" element={<BackboneNetwork />} />
-                    <Route path="/solutions/cloud-interconnection" element={<CloudInterconnection />} />
-                    <Route path="/solutions/value-added-services" element={<ValueAddedServices />} />
-                    <Route path="/about/company-overview" element={<CompanyOverview />} />
-                    <Route path="/about/vision-mission" element={<VisionMission />} />
-                    <Route path="/about/leadership" element={<Leadership />} />
-                    <Route path="/about/milestones" element={<Milestones />} />
-                    <Route path="/network-coverage" element={<NetworkCoverage />} />
-                    <Route path="/resources/insights" element={<Insights />} />
-                    <Route path="/resources/case-studies" element={<CaseStudies />} />
-                    <Route path="/resources/faq" element={<FAQ />} />
-                    <Route path="/customers" element={<Customers />} />
-                    <Route path="/careers" element={<Careers />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/tgcs-project" element={<TGCSProject />} />
+                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route
+                      path="home"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminHomeManagement />
+                        </RequireAdminRole>
+                      }
+                    />
+                    <Route
+                      path="contact"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <ManageContact />
+                        </RequireAdminRole>
+                      }
+                    />
+                    <Route path="settings" element={<Settings />} />
+                    
+                    {/* Resources Routes */}
+                    <Route
+                      path="resources/insights"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminResourcesInsights />
+                        </RequireAdminRole>
+                      }
+                    />
+                    <Route
+                      path="resources/case-studies"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminResourcesCaseStudies />
+                        </RequireAdminRole>
+                      }
+                    />
+                    <Route
+                      path="resources/faq"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminResourcesFAQ />
+                        </RequireAdminRole>
+                      }
+                    />
+                    
+                    {/* Careers Routes */}
+                    <Route
+                      path="careers/jobs"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'hr']}>
+                          <AdminCareersJobs />
+                        </RequireAdminRole>
+                      }
+                    />
+                    <Route
+                      path="careers/applications"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'hr']}>
+                          <AdminCareersApplications />
+                        </RequireAdminRole>
+                      }
+                    />
+                    
+                    {/* Customers Route */}
+                    <Route
+                      path="customers"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminCustomers />
+                        </RequireAdminRole>
+                      }
+                    />
+                    
+                    {/* Solutions Routes */}
+                    <Route
+                      path="solutions/dedicated-connectivity"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminSolutionsDedicatedConnectivity />
+                        </RequireAdminRole>
+                      }
+                    />
+                    <Route
+                      path="solutions/backbone-network"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminSolutionsBackboneNetwork />
+                        </RequireAdminRole>
+                      }
+                    />
+                    <Route
+                      path="solutions/cloud-interconnection"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminPlaceholder
+                            title="Cloud Interconnection Management"
+                            description="Content management coming soon. Use similar structure as Dedicated Connectivity"
+                          />
+                        </RequireAdminRole>
+                      }
+                    />
+                    <Route
+                      path="solutions/value-added-services"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminPlaceholder
+                            title="Value-Added Services Management"
+                            description="Content management coming soon. Use similar structure as Dedicated Connectivity"
+                          />
+                        </RequireAdminRole>
+                      }
+                    />
+                    
+                    {/* About Routes */}
+                    <Route
+                      path="about/company-overview"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminAboutCompanyOverview />
+                        </RequireAdminRole>
+                      }
+                    />
+                    <Route
+                      path="about/vision-mission"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminAboutVisionMission />
+                        </RequireAdminRole>
+                      }
+                    />
+                    <Route
+                      path="about/leadership"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminAboutLeadership />
+                        </RequireAdminRole>
+                      }
+                    />
+                    <Route
+                      path="about/milestones"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminPlaceholder
+                            title="Milestones Management"
+                            description="Timeline and achievements management coming soon"
+                          />
+                        </RequireAdminRole>
+                      }
+                    />
+                    
+                    {/* Network Coverage Route */}
+                    <Route
+                      path="network-coverage"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminNetworkCoverage />
+                        </RequireAdminRole>
+                      }
+                    />
+                    
+                    {/* TGCS Management Route */}
+                    <Route
+                      path="tgcs-management"
+                      element={
+                        <RequireAdminRole allowed={['super_admin', 'content']}>
+                          <AdminTGCSManagement />
+                        </RequireAdminRole>
+                      }
+                    />
                   </Routes>
-                </main>
-                <ContactBar />
-                <Footer />
-              </div>
-            }
-          />
-        </Routes>
-      </Router>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Public Routes */}
+            <Route
+              path="*"
+              element={
+                <div className="min-h-screen bg-white flex flex-col">
+                  <Navbar />
+                  <main className="flex-grow">
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/solutions/dedicated-connectivity" element={<DedicatedConnectivity />} />
+                      <Route path="/solutions/backbone-network" element={<BackboneNetwork />} />
+                      <Route path="/solutions/cloud-interconnection" element={<CloudInterconnection />} />
+                      <Route path="/solutions/value-added-services" element={<ValueAddedServices />} />
+                      <Route path="/about/company-overview" element={<CompanyOverview />} />
+                      <Route path="/about/vision-mission" element={<VisionMission />} />
+                      <Route path="/about/leadership" element={<Leadership />} />
+                      <Route path="/about/milestones" element={<Milestones />} />
+                      <Route path="/network-coverage" element={<NetworkCoverage />} />
+                      <Route path="/resources/insights" element={<Insights />} />
+                      <Route path="/resources/case-studies" element={<CaseStudies />} />
+                      <Route path="/resources/faq" element={<FAQ />} />
+                      <Route path="/customers" element={<Customers />} />
+                      <Route path="/careers" element={<Careers />} />
+                      <Route path="/contact" element={<Contact />} />
+                      <Route path="/tgcs-project" element={<TGCSProject />} />
+                    </Routes>
+                  </main>
+                  <ContactBar />
+                  <Footer />
+                </div>
+              }
+            />
+          </Routes>
+        </Router>
+      </LanguageProvider>
     </AuthProvider>
   );
 }

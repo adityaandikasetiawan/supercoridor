@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import initSqlJs from 'sql.js';
 import { createRequire } from 'node:module';
+import multer from 'multer';
 
 const app = express();
 
@@ -28,6 +29,18 @@ const ADMIN_EMAIL = (process.env.ADMIN_EMAIL ?? 'admin@supercorridor.com').trim(
 const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH ?? null;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? null;
 
+const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL ?? ADMIN_EMAIL).trim().toLowerCase();
+const SUPER_ADMIN_PASSWORD_HASH = process.env.SUPER_ADMIN_PASSWORD_HASH ?? ADMIN_PASSWORD_HASH;
+const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD ?? ADMIN_PASSWORD;
+
+const CONTENT_EMAIL = (process.env.CONTENT_EMAIL ?? 'content@supercorridor.com').trim().toLowerCase();
+const CONTENT_PASSWORD_HASH = process.env.CONTENT_PASSWORD_HASH ?? null;
+const CONTENT_PASSWORD = process.env.CONTENT_PASSWORD ?? null;
+
+const HR_EMAIL = (process.env.HR_EMAIL ?? 'hr@supercorridor.com').trim().toLowerCase();
+const HR_PASSWORD_HASH = process.env.HR_PASSWORD_HASH ?? null;
+const HR_PASSWORD = process.env.HR_PASSWORD ?? null;
+
 const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 
@@ -40,6 +53,45 @@ const AUTH_STORE_PATH = process.env.AUTH_STORE_PATH ?? path.join(os.tmpdir(), 's
 const CONTENT_STORE_PATH =
   process.env.CONTENT_STORE_PATH ?? path.join(os.tmpdir(), 'supercorridor-content-store.json');
 const SQLITE_DB_PATH = process.env.SQLITE_DB_PATH ?? path.join(os.tmpdir(), 'supercorridor.sqlite');
+const UPLOADS_DIR = process.env.UPLOADS_DIR ?? path.join(os.tmpdir(), 'supercorridor-uploads');
+const RESUME_UPLOAD_DIR = path.join(UPLOADS_DIR, 'resumes');
+const resumeUpload = multer({
+  storage: multer.diskStorage({
+    destination(_req, _file, cb) {
+      fs.mkdir(RESUME_UPLOAD_DIR, { recursive: true })
+        .then(() => cb(null, RESUME_UPLOAD_DIR))
+        .catch((err) => cb(err, RESUME_UPLOAD_DIR));
+    },
+    filename(_req, file, cb) {
+      const ext = path.extname(file.originalname ?? '').toLowerCase();
+      const allowedExt = new Set(['.pdf', '.doc', '.docx']);
+      const safeExt = allowedExt.has(ext) ? ext : '';
+      const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${safeExt}`;
+      cb(null, filename);
+    },
+  }),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter(_req, file, cb) {
+    const ext = path.extname(file.originalname ?? '').toLowerCase();
+    const allowedExt = new Set(['.pdf', '.doc', '.docx']);
+    const allowedMime = new Set([
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ]);
+    cb(null, allowedExt.has(ext) || allowedMime.has(file.mimetype));
+  },
+});
+
+function resumeUploadMiddleware(req, res, next) {
+  resumeUpload.single('resume')(req, res, (err) => {
+    if (!err) return next();
+    if (err && err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ ok: false, error: 'FILE_TOO_LARGE' });
+    }
+    return res.status(400).json({ ok: false, error: 'UPLOAD_FAILED' });
+  });
+}
 
 function nowMs() {
   return Date.now();
@@ -57,8 +109,8 @@ function assertProductionConfig() {
   if (!REFRESH_TOKEN_SECRET || REFRESH_TOKEN_SECRET.length < 32) {
     throw new Error('REFRESH_TOKEN_SECRET must be set and at least 32 characters in production');
   }
-  if (!ADMIN_PASSWORD_HASH) {
-    throw new Error('ADMIN_PASSWORD_HASH must be set in production');
+  if (!SUPER_ADMIN_PASSWORD_HASH) {
+    throw new Error('ADMIN_PASSWORD_HASH (or SUPER_ADMIN_PASSWORD_HASH) must be set in production');
   }
 }
 
@@ -615,6 +667,8 @@ function validateCareersApplications(input) {
   if (!Array.isArray(input)) return null;
   if (input.length > 10000) return null;
   const allowedStatus = new Set(['new', 'reviewed', 'shortlisted', 'rejected']);
+  const allowedGender = new Set(['male', 'female']);
+  const allowedMarital = new Set(['single', 'married', 'divorced', 'widowed']);
   const next = [];
   for (const item of input) {
     if (!item || typeof item !== 'object') return null;
@@ -630,6 +684,22 @@ function validateCareersApplications(input) {
     const coverLetter = typeof item.coverLetter === 'string' ? item.coverLetter : null;
     const status = typeof item.status === 'string' ? item.status : null;
     const experience = typeof item.experience === 'string' ? item.experience : null;
+    const nik = typeof item.nik === 'string' ? item.nik : '';
+    const birthPlace = typeof item.birthPlace === 'string' ? item.birthPlace : '';
+    const birthDate = typeof item.birthDate === 'string' ? item.birthDate : '';
+    const gender = typeof item.gender === 'string' ? item.gender : '';
+    const maritalStatus = typeof item.maritalStatus === 'string' ? item.maritalStatus : '';
+    const address = typeof item.address === 'string' ? item.address : '';
+    const city = typeof item.city === 'string' ? item.city : '';
+    const postalCode = typeof item.postalCode === 'string' ? item.postalCode : '';
+    const educationLevel = typeof item.educationLevel === 'string' ? item.educationLevel : '';
+    const institution = typeof item.institution === 'string' ? item.institution : '';
+    const major = typeof item.major === 'string' ? item.major : '';
+    const gpa = typeof item.gpa === 'string' ? item.gpa : '';
+    const expectedSalary = typeof item.expectedSalary === 'string' ? item.expectedSalary : '';
+    const availableStartDate = typeof item.availableStartDate === 'string' ? item.availableStartDate : '';
+    const emergencyName = typeof item.emergencyName === 'string' ? item.emergencyName : '';
+    const emergencyPhone = typeof item.emergencyPhone === 'string' ? item.emergencyPhone : '';
     if (
       !id ||
       !applicantName ||
@@ -647,6 +717,8 @@ function validateCareersApplications(input) {
       return null;
     }
     if (!allowedStatus.has(status)) return null;
+    if (gender && !allowedGender.has(gender)) return null;
+    if (maritalStatus && !allowedMarital.has(maritalStatus)) return null;
     next.push({
       id,
       applicantName,
@@ -660,9 +732,128 @@ function validateCareersApplications(input) {
       coverLetter,
       status,
       experience,
+      nik,
+      birthPlace,
+      birthDate,
+      gender,
+      maritalStatus,
+      address,
+      city,
+      postalCode,
+      educationLevel,
+      institution,
+      major,
+      gpa,
+      expectedSalary,
+      availableStartDate,
+      emergencyName,
+      emergencyPhone,
     });
   }
   return next;
+}
+
+function validateCareersApplicationCreate(input) {
+  if (!input || typeof input !== 'object') return null;
+  const applicantName = typeof input.applicantName === 'string' ? input.applicantName.trim() : '';
+  const email = typeof input.email === 'string' ? input.email.trim() : '';
+  const phone = typeof input.phone === 'string' ? input.phone.trim() : '';
+  const jobId = typeof input.jobId === 'string' ? input.jobId.trim() : '';
+  const experience = typeof input.experience === 'string' ? input.experience.trim() : '';
+  const resumeUrl = typeof input.resumeUrl === 'string' ? input.resumeUrl.trim() : '';
+  const coverLetter = typeof input.coverLetter === 'string' ? input.coverLetter.trim() : '';
+  const nik = typeof input.nik === 'string' ? input.nik.trim() : '';
+  const birthPlace = typeof input.birthPlace === 'string' ? input.birthPlace.trim() : '';
+  const birthDate = typeof input.birthDate === 'string' ? input.birthDate.trim() : '';
+  const gender = typeof input.gender === 'string' ? input.gender.trim() : '';
+  const maritalStatus = typeof input.maritalStatus === 'string' ? input.maritalStatus.trim() : '';
+  const address = typeof input.address === 'string' ? input.address.trim() : '';
+  const city = typeof input.city === 'string' ? input.city.trim() : '';
+  const postalCode = typeof input.postalCode === 'string' ? input.postalCode.trim() : '';
+  const educationLevel = typeof input.educationLevel === 'string' ? input.educationLevel.trim() : '';
+  const institution = typeof input.institution === 'string' ? input.institution.trim() : '';
+  const major = typeof input.major === 'string' ? input.major.trim() : '';
+  const gpa = typeof input.gpa === 'string' ? input.gpa.trim() : '';
+  const expectedSalary = typeof input.expectedSalary === 'string' ? input.expectedSalary.trim() : '';
+  const availableStartDate = typeof input.availableStartDate === 'string' ? input.availableStartDate.trim() : '';
+  const emergencyName = typeof input.emergencyName === 'string' ? input.emergencyName.trim() : '';
+  const emergencyPhone = typeof input.emergencyPhone === 'string' ? input.emergencyPhone.trim() : '';
+
+  if (
+    !applicantName ||
+    !email ||
+    !phone ||
+    !jobId ||
+    !experience ||
+    !nik ||
+    !birthDate ||
+    !gender ||
+    !address ||
+    !city ||
+    !educationLevel ||
+    !institution ||
+    !major ||
+    !expectedSalary ||
+    !emergencyName ||
+    !emergencyPhone
+  ) {
+    return null;
+  }
+  if (applicantName.length > 200) return null;
+  if (email.length > 320) return null;
+  if (phone.length > 50) return null;
+  if (jobId.length > 100) return null;
+  if (experience.length > 100) return null;
+  if (resumeUrl.length > 2000) return null;
+  if (coverLetter.length > 20000) return null;
+  if (nik.length > 40) return null;
+  if (!/^[0-9]{8,40}$/.test(nik)) return null;
+  if (birthPlace.length > 200) return null;
+  if (birthDate.length > 20) return null;
+  if (gender !== 'male' && gender !== 'female') return null;
+  if (maritalStatus && maritalStatus.length > 20) return null;
+  if (maritalStatus && !['single', 'married', 'divorced', 'widowed'].includes(maritalStatus)) return null;
+  if (address.length > 500) return null;
+  if (city.length > 200) return null;
+  if (postalCode.length > 20) return null;
+  if (educationLevel.length > 100) return null;
+  if (institution.length > 200) return null;
+  if (major.length > 200) return null;
+  if (gpa.length > 20) return null;
+  if (expectedSalary.length > 50) return null;
+  if (availableStartDate.length > 20) return null;
+  if (emergencyName.length > 200) return null;
+  if (emergencyPhone.length > 50) return null;
+
+  if (!email.includes('@')) return null;
+
+  const location = city;
+  return {
+    applicantName,
+    email,
+    phone,
+    location,
+    jobId,
+    experience,
+    resumeUrl,
+    coverLetter,
+    nik,
+    birthPlace,
+    birthDate,
+    gender,
+    maritalStatus,
+    address,
+    city,
+    postalCode,
+    educationLevel,
+    institution,
+    major,
+    gpa,
+    expectedSalary,
+    availableStartDate,
+    emergencyName,
+    emergencyPhone,
+  };
 }
 
 function validateHomeManagement(input) {
@@ -701,9 +892,16 @@ function signAccessToken(user) {
   );
 }
 
+function normalizeRole(rawRole) {
+  const role = String(rawRole ?? '').trim().toLowerCase();
+  if (role === 'admin') return 'super_admin';
+  if (role === 'super_admin' || role === 'content' || role === 'hr') return role;
+  return null;
+}
+
 function signRefreshToken(user, jti) {
   return jwt.sign(
-    { type: 'refresh', jti },
+    { type: 'refresh', jti, email: user.email, name: user.name, role: user.role },
     REFRESH_TOKEN_SECRET ?? 'dev_refresh_secret_change_me',
     { subject: user.id, expiresIn: REFRESH_TOKEN_TTL_SECONDS }
   );
@@ -792,11 +990,13 @@ function requireAuth(req, res, next) {
     if (!token) return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
     const payload = jwt.verify(token, ACCESS_TOKEN_SECRET ?? 'dev_access_secret_change_me');
     if (!payload || typeof payload !== 'object') return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
+    const role = normalizeRole(payload.role);
+    if (!role) return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
     req.auth = {
       userId: payload.sub ?? '1',
-      email: payload.email ?? ADMIN_EMAIL,
+      email: payload.email ?? SUPER_ADMIN_EMAIL,
       name: payload.name ?? 'Admin User',
-      role: payload.role ?? 'admin',
+      role,
     };
     return next();
   } catch {
@@ -804,14 +1004,30 @@ function requireAuth(req, res, next) {
   }
 }
 
-function requireAdmin(req, res, next) {
-  if (req.auth?.role !== 'admin') return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
-  return next();
+function requireAnyRole(allowedRoles) {
+  return function requireRoleMiddleware(req, res, next) {
+    if (!req.auth?.role || !allowedRoles.includes(req.auth.role)) {
+      return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
+    }
+    return next();
+  };
 }
+
+const requireAdminAny = requireAnyRole(['super_admin', 'content', 'hr']);
+const requireContentAdmin = requireAnyRole(['super_admin', 'content']);
+const requireHrAdmin = requireAnyRole(['super_admin', 'hr']);
 
 app.set('trust proxy', true);
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
+app.use(
+  '/uploads',
+  express.static(UPLOADS_DIR, {
+    setHeaders(res) {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+    },
+  })
+);
 app.use(
   helmet({
     contentSecurityPolicy: false,
@@ -866,7 +1082,42 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       return res.status(423).json({ ok: false, error: 'LOCKED', lockUntil: lockState.lockUntil });
     }
 
-    if (email !== ADMIN_EMAIL) {
+    const accounts = [
+      {
+        id: '1',
+        email: SUPER_ADMIN_EMAIL,
+        aliases: [SUPER_ADMIN_EMAIL, 'admin@supercorridor.com', 'admin@supercorridor.co.id'],
+        name: 'Super Admin',
+        role: 'super_admin',
+        passwordHash: SUPER_ADMIN_PASSWORD_HASH,
+        passwordPlain: SUPER_ADMIN_PASSWORD,
+        devFallbackPassword: 'admin123',
+      },
+      {
+        id: '2',
+        email: CONTENT_EMAIL,
+        aliases: [CONTENT_EMAIL, 'content@supercorridor.com', 'content@supercorridor.co.id'],
+        name: 'Content Admin',
+        role: 'content',
+        passwordHash: CONTENT_PASSWORD_HASH,
+        passwordPlain: CONTENT_PASSWORD,
+        devFallbackPassword: 'content123',
+      },
+      {
+        id: '3',
+        email: HR_EMAIL,
+        aliases: [HR_EMAIL, 'hr@supercorridor.com', 'hr@supercorridor.co.id'],
+        name: 'HR Admin',
+        role: 'hr',
+        passwordHash: HR_PASSWORD_HASH,
+        passwordPlain: HR_PASSWORD,
+        devFallbackPassword: 'hr123',
+      },
+    ];
+
+    const account = accounts.find((a) => a.aliases.includes(email)) ?? null;
+
+    if (!account) {
       const next = recordFailedAttempt(lockKey);
       if (next.lockUntil) {
         return res.status(423).json({ ok: false, error: 'LOCKED', lockUntil: next.lockUntil });
@@ -875,11 +1126,11 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     }
 
     const passwordOk =
-      ADMIN_PASSWORD_HASH
-        ? await bcrypt.compare(password, ADMIN_PASSWORD_HASH)
-        : ADMIN_PASSWORD
-          ? password === ADMIN_PASSWORD
-          : !isProd() && password === 'admin123';
+      account.passwordHash
+        ? await bcrypt.compare(password, account.passwordHash)
+        : account.passwordPlain
+          ? password === account.passwordPlain
+          : password === account.devFallbackPassword;
 
     if (!passwordOk) {
       const next = recordFailedAttempt(lockKey);
@@ -891,12 +1142,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
 
     resetLockState(lockKey);
 
-    const user = {
-      id: '1',
-      email,
-      name: 'Admin User',
-      role: 'admin',
-    };
+    const user = { id: account.id, email: account.email, name: account.name, role: account.role };
 
     const accessToken = signAccessToken(user);
     const refreshJti = crypto.randomUUID();
@@ -990,11 +1236,12 @@ app.post('/api/auth/refresh', refreshLimiter, async (req, res) => {
       return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
     }
 
+    const role = normalizeRole(payload.role) ?? 'super_admin';
     const user = {
       id: userId,
-      email: ADMIN_EMAIL,
-      name: 'Admin User',
-      role: 'admin',
+      email: payload.email ?? SUPER_ADMIN_EMAIL,
+      name: payload.name ?? 'Admin User',
+      role,
     };
 
     const accessToken = signAccessToken(user);
@@ -1033,12 +1280,14 @@ app.get('/api/auth/me', (req, res) => {
 
     const payload = jwt.verify(token, ACCESS_TOKEN_SECRET ?? 'dev_access_secret_change_me');
     if (!payload || typeof payload !== 'object') return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
+    const role = normalizeRole(payload.role);
+    if (!role) return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
 
     const user = {
       id: payload.sub ?? '1',
-      email: payload.email ?? ADMIN_EMAIL,
+      email: payload.email ?? SUPER_ADMIN_EMAIL,
       name: payload.name ?? 'Admin User',
-      role: payload.role ?? 'admin',
+      role,
     };
     return res.json({ ok: true, user });
   } catch {
@@ -1087,13 +1336,73 @@ app.get('/api/content/careers/jobs', async (_req, res) => {
   res.json({ ok: true, jobs });
 });
 
-app.get('/api/admin/content/tgcs', requireAuth, requireAdmin, async (_req, res) => {
+app.post('/api/careers/apply', resumeUploadMiddleware, async (req, res) => {
+  const input = validateCareersApplicationCreate(req.body);
+  if (!input) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+
+  const store = await readContentStore();
+  const jobs = store.careersJobs ?? defaultCareersJobs();
+  const job = jobs.find((j) => j && typeof j === 'object' && j.id === input.jobId);
+  if (!job || !job.active) return res.status(404).json({ ok: false, error: 'JOB_NOT_FOUND' });
+
+  const resumeUrl = req.file?.filename
+    ? `/uploads/resumes/${req.file.filename}`
+    : input.resumeUrl;
+  if (!resumeUrl) return res.status(400).json({ ok: false, error: 'RESUME_REQUIRED' });
+
+  const appliedDate = new Date().toISOString().slice(0, 10);
+  const application = {
+    id: crypto.randomBytes(12).toString('base64url'),
+    applicantName: input.applicantName,
+    email: input.email,
+    phone: input.phone,
+    location: input.location,
+    jobTitle: String(job.title ?? ''),
+    jobId: String(job.id ?? input.jobId),
+    appliedDate,
+    resumeUrl,
+    coverLetter: input.coverLetter,
+    status: 'new',
+    experience: input.experience,
+    nik: input.nik,
+    birthPlace: input.birthPlace,
+    birthDate: input.birthDate,
+    gender: input.gender,
+    maritalStatus: input.maritalStatus,
+    address: input.address,
+    city: input.city,
+    postalCode: input.postalCode,
+    educationLevel: input.educationLevel,
+    institution: input.institution,
+    major: input.major,
+    gpa: input.gpa,
+    expectedSalary: input.expectedSalary,
+    availableStartDate: input.availableStartDate,
+    emergencyName: input.emergencyName,
+    emergencyPhone: input.emergencyPhone,
+  };
+
+  await withContentWrite(async () => {
+    const current = await readContentStore();
+    const existing = current.careersApplications ?? defaultCareersApplications();
+    const next = [application, ...existing].slice(0, 10000);
+    await writeContentStore({
+      ...current,
+      careersApplications: next,
+      careersApplicationsUpdatedAt: nowMs(),
+    });
+  });
+
+  res.json({ ok: true, id: application.id });
+});
+
+app.get('/api/admin/content/tgcs', requireAuth, requireContentAdmin, async (_req, res) => {
   const store = await readContentStore();
   const tgcs = store.tgcs ?? defaultTGCSData();
   res.json({ ok: true, tgcs });
 });
 
-app.put('/api/admin/content/tgcs', requireAuth, requireAdmin, async (req, res) => {
+app.put('/api/admin/content/tgcs', requireAuth, requireContentAdmin, async (req, res) => {
   const tgcs = validateTGCSData(req.body?.tgcs);
   if (!tgcs) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
 
@@ -1105,13 +1414,13 @@ app.put('/api/admin/content/tgcs', requireAuth, requireAdmin, async (req, res) =
   res.json({ ok: true });
 });
 
-app.get('/api/admin/content/hero-slides', requireAuth, requireAdmin, async (_req, res) => {
+app.get('/api/admin/content/hero-slides', requireAuth, requireContentAdmin, async (_req, res) => {
   const store = await readContentStore();
   const heroSlides = store.heroSlides ?? defaultHeroSlides();
   res.json({ ok: true, heroSlides });
 });
 
-app.put('/api/admin/content/hero-slides', requireAuth, requireAdmin, async (req, res) => {
+app.put('/api/admin/content/hero-slides', requireAuth, requireContentAdmin, async (req, res) => {
   const heroSlides = validateHeroSlides(req.body?.heroSlides);
   if (!heroSlides) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
 
@@ -1123,13 +1432,13 @@ app.put('/api/admin/content/hero-slides', requireAuth, requireAdmin, async (req,
   res.json({ ok: true });
 });
 
-app.get('/api/admin/content/home-management', requireAuth, requireAdmin, async (_req, res) => {
+app.get('/api/admin/content/home-management', requireAuth, requireContentAdmin, async (_req, res) => {
   const store = await readContentStore();
   const homeManagement = store.homeManagement ?? null;
   res.json({ ok: true, homeManagement });
 });
 
-app.put('/api/admin/content/home-management', requireAuth, requireAdmin, async (req, res) => {
+app.put('/api/admin/content/home-management', requireAuth, requireContentAdmin, async (req, res) => {
   const homeManagement = validateHomeManagement(req.body?.homeManagement);
   if (!homeManagement) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
 
@@ -1141,13 +1450,13 @@ app.put('/api/admin/content/home-management', requireAuth, requireAdmin, async (
   res.json({ ok: true });
 });
 
-app.get('/api/admin/content/resources/insights', requireAuth, requireAdmin, async (_req, res) => {
+app.get('/api/admin/content/resources/insights', requireAuth, requireContentAdmin, async (_req, res) => {
   const store = await readContentStore();
   const articles = store.resourcesInsights ?? defaultResourcesInsights();
   res.json({ ok: true, articles });
 });
 
-app.put('/api/admin/content/resources/insights', requireAuth, requireAdmin, async (req, res) => {
+app.put('/api/admin/content/resources/insights', requireAuth, requireContentAdmin, async (req, res) => {
   const articles = validateResourcesInsights(req.body?.articles);
   if (!articles) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
 
@@ -1159,13 +1468,13 @@ app.put('/api/admin/content/resources/insights', requireAuth, requireAdmin, asyn
   res.json({ ok: true });
 });
 
-app.get('/api/admin/content/resources/case-studies', requireAuth, requireAdmin, async (_req, res) => {
+app.get('/api/admin/content/resources/case-studies', requireAuth, requireContentAdmin, async (_req, res) => {
   const store = await readContentStore();
   const caseStudies = store.resourcesCaseStudies ?? defaultResourcesCaseStudies();
   res.json({ ok: true, caseStudies });
 });
 
-app.put('/api/admin/content/resources/case-studies', requireAuth, requireAdmin, async (req, res) => {
+app.put('/api/admin/content/resources/case-studies', requireAuth, requireContentAdmin, async (req, res) => {
   const caseStudies = validateResourcesCaseStudies(req.body?.caseStudies);
   if (!caseStudies) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
 
@@ -1181,13 +1490,13 @@ app.put('/api/admin/content/resources/case-studies', requireAuth, requireAdmin, 
   res.json({ ok: true });
 });
 
-app.get('/api/admin/content/resources/faq', requireAuth, requireAdmin, async (_req, res) => {
+app.get('/api/admin/content/resources/faq', requireAuth, requireContentAdmin, async (_req, res) => {
   const store = await readContentStore();
   const faqs = store.resourcesFAQ ?? defaultResourcesFAQ();
   res.json({ ok: true, faqs });
 });
 
-app.put('/api/admin/content/resources/faq', requireAuth, requireAdmin, async (req, res) => {
+app.put('/api/admin/content/resources/faq', requireAuth, requireContentAdmin, async (req, res) => {
   const faqs = validateResourcesFAQ(req.body?.faqs);
   if (!faqs) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
 
@@ -1199,13 +1508,13 @@ app.put('/api/admin/content/resources/faq', requireAuth, requireAdmin, async (re
   res.json({ ok: true });
 });
 
-app.get('/api/admin/content/careers/jobs', requireAuth, requireAdmin, async (_req, res) => {
+app.get('/api/admin/content/careers/jobs', requireAuth, requireHrAdmin, async (_req, res) => {
   const store = await readContentStore();
   const jobs = store.careersJobs ?? defaultCareersJobs();
   res.json({ ok: true, jobs });
 });
 
-app.put('/api/admin/content/careers/jobs', requireAuth, requireAdmin, async (req, res) => {
+app.put('/api/admin/content/careers/jobs', requireAuth, requireHrAdmin, async (req, res) => {
   const jobs = validateCareersJobs(req.body?.jobs);
   if (!jobs) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
 
@@ -1217,13 +1526,13 @@ app.put('/api/admin/content/careers/jobs', requireAuth, requireAdmin, async (req
   res.json({ ok: true });
 });
 
-app.get('/api/admin/content/careers/applications', requireAuth, requireAdmin, async (_req, res) => {
+app.get('/api/admin/content/careers/applications', requireAuth, requireHrAdmin, async (_req, res) => {
   const store = await readContentStore();
   const applications = store.careersApplications ?? defaultCareersApplications();
   res.json({ ok: true, applications });
 });
 
-app.put('/api/admin/content/careers/applications', requireAuth, requireAdmin, async (req, res) => {
+app.put('/api/admin/content/careers/applications', requireAuth, requireHrAdmin, async (req, res) => {
   const applications = validateCareersApplications(req.body?.applications);
   if (!applications) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
 
@@ -1239,7 +1548,7 @@ app.put('/api/admin/content/careers/applications', requireAuth, requireAdmin, as
   res.json({ ok: true });
 });
 
-app.get('/api/admin/ping', requireAuth, requireAdmin, (_req, res) => {
+app.get('/api/admin/ping', requireAuth, requireAdminAny, (_req, res) => {
   res.json({ ok: true });
 });
 

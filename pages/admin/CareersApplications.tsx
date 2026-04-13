@@ -28,6 +28,22 @@ interface Application {
   coverLetter: string;
   status: 'new' | 'reviewed' | 'shortlisted' | 'rejected';
   experience: string;
+  nik?: string;
+  birthPlace?: string;
+  birthDate?: string;
+  gender?: 'male' | 'female' | '';
+  maritalStatus?: 'single' | 'married' | 'divorced' | 'widowed' | '';
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  educationLevel?: string;
+  institution?: string;
+  major?: string;
+  gpa?: string;
+  expectedSalary?: string;
+  availableStartDate?: string;
+  emergencyName?: string;
+  emergencyPhone?: string;
 }
 
 export function AdminCareersApplications() {
@@ -396,6 +412,104 @@ export function AdminCareersApplications() {
                         <p className="text-sm text-gray-900">
                           {new Date(selectedApplication.appliedDate).toLocaleDateString()}
                         </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <h3 className="text-gray-900 mb-3">Data Pribadi</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500">NIK</p>
+                        <p className="text-sm text-gray-900">{selectedApplication.nik || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Tempat / Tanggal Lahir</p>
+                        <p className="text-sm text-gray-900">
+                          {(selectedApplication.birthPlace || '-') +
+                            ' / ' +
+                            (selectedApplication.birthDate || '-')}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Jenis Kelamin</p>
+                        <p className="text-sm text-gray-900">
+                          {selectedApplication.gender === 'male'
+                            ? 'Laki-laki'
+                            : selectedApplication.gender === 'female'
+                              ? 'Perempuan'
+                              : '-'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Status Pernikahan</p>
+                        <p className="text-sm text-gray-900">
+                          {selectedApplication.maritalStatus === 'single'
+                            ? 'Belum menikah'
+                            : selectedApplication.maritalStatus === 'married'
+                              ? 'Menikah'
+                              : selectedApplication.maritalStatus === 'divorced'
+                                ? 'Cerai hidup'
+                                : selectedApplication.maritalStatus === 'widowed'
+                                  ? 'Cerai mati'
+                                  : '-'}
+                        </p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <p className="text-xs text-gray-500">Alamat</p>
+                        <p className="text-sm text-gray-900">{selectedApplication.address || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Kota</p>
+                        <p className="text-sm text-gray-900">{selectedApplication.city || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Kode Pos</p>
+                        <p className="text-sm text-gray-900">{selectedApplication.postalCode || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Gaji yang Diharapkan</p>
+                        <p className="text-sm text-gray-900">{selectedApplication.expectedSalary || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Ketersediaan Mulai</p>
+                        <p className="text-sm text-gray-900">{selectedApplication.availableStartDate || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <h3 className="text-gray-900 mb-3">Pendidikan</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500">Pendidikan Terakhir</p>
+                        <p className="text-sm text-gray-900">{selectedApplication.educationLevel || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Institusi</p>
+                        <p className="text-sm text-gray-900">{selectedApplication.institution || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Jurusan</p>
+                        <p className="text-sm text-gray-900">{selectedApplication.major || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">IPK</p>
+                        <p className="text-sm text-gray-900">{selectedApplication.gpa || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <h3 className="text-gray-900 mb-3">Kontak Darurat</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500">Nama</p>
+                        <p className="text-sm text-gray-900">{selectedApplication.emergencyName || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">No. HP</p>
+                        <p className="text-sm text-gray-900">{selectedApplication.emergencyPhone || '-'}</p>
                       </div>
                     </div>
                   </div>

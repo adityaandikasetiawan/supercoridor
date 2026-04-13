@@ -32,6 +32,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const role = user?.role === 'admin' ? 'super_admin' : user?.role;
+  const canManageContent = role === 'super_admin' || role === 'content';
+  const canManageHr = role === 'super_admin' || role === 'hr';
 
   const handleLogout = () => {
     logout();
@@ -42,48 +45,56 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   const menuItems = [
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/admin/home', icon: Home, label: 'Home Page' },
-    { path: '/admin/tgcs-management', icon: Layers, label: 'TGCS Project' },
-    {
-      label: 'Solutions',
-      icon: Network,
-      submenu: [
-        { path: '/admin/solutions/dedicated-connectivity', label: 'Dedicated Connectivity' },
-        { path: '/admin/solutions/backbone-network', label: 'Backbone & Network' },
-        { path: '/admin/solutions/cloud-interconnection', label: 'Cloud Interconnection' },
-        { path: '/admin/solutions/value-added-services', label: 'Value-Added Services' },
-      ],
-    },
-    {
-      label: 'About Us',
-      icon: Info,
-      submenu: [
-        { path: '/admin/about/company-overview', label: 'Company Overview' },
-        { path: '/admin/about/vision-mission', label: 'Vision & Mission' },
-        { path: '/admin/about/leadership', label: 'Leadership' },
-        { path: '/admin/about/milestones', label: 'Milestones' },
-      ],
-    },
-    { path: '/admin/network-coverage', icon: Globe, label: 'Network & Coverage' },
-    {
-      label: 'Resources',
-      icon: FileText,
-      submenu: [
-        { path: '/admin/resources/insights', label: 'Insights / Articles' },
-        { path: '/admin/resources/case-studies', label: 'Case Studies' },
-        { path: '/admin/resources/faq', label: 'FAQ' },
-      ],
-    },
-    { path: '/admin/customers', icon: Users, label: 'Customers' },
-    {
-      label: 'Careers',
-      icon: Briefcase,
-      submenu: [
-        { path: '/admin/careers/jobs', label: 'Job Posts' },
-        { path: '/admin/careers/applications', label: 'Applications' },
-      ],
-    },
-    { path: '/admin/contact', icon: Mail, label: 'Contact Messages' },
+    ...(canManageContent
+      ? [
+          { path: '/admin/home', icon: Home, label: 'Home Page' },
+          { path: '/admin/tgcs-management', icon: Layers, label: 'TGCS Project' },
+          {
+            label: 'Solutions',
+            icon: Network,
+            submenu: [
+              { path: '/admin/solutions/dedicated-connectivity', label: 'Dedicated Connectivity' },
+              { path: '/admin/solutions/backbone-network', label: 'Backbone & Network' },
+              { path: '/admin/solutions/cloud-interconnection', label: 'Cloud Interconnection' },
+              { path: '/admin/solutions/value-added-services', label: 'Value-Added Services' },
+            ],
+          },
+          {
+            label: 'About Us',
+            icon: Info,
+            submenu: [
+              { path: '/admin/about/company-overview', label: 'Company Overview' },
+              { path: '/admin/about/vision-mission', label: 'Vision & Mission' },
+              { path: '/admin/about/leadership', label: 'Leadership' },
+              { path: '/admin/about/milestones', label: 'Milestones' },
+            ],
+          },
+          { path: '/admin/network-coverage', icon: Globe, label: 'Network & Coverage' },
+          {
+            label: 'Resources',
+            icon: FileText,
+            submenu: [
+              { path: '/admin/resources/insights', label: 'Insights / Articles' },
+              { path: '/admin/resources/case-studies', label: 'Case Studies' },
+              { path: '/admin/resources/faq', label: 'FAQ' },
+            ],
+          },
+          { path: '/admin/customers', icon: Users, label: 'Customers' },
+          { path: '/admin/contact', icon: Mail, label: 'Contact Messages' },
+        ]
+      : []),
+    ...(canManageHr
+      ? [
+          {
+            label: 'Careers',
+            icon: Briefcase,
+            submenu: [
+              { path: '/admin/careers/jobs', label: 'Job Posts' },
+              { path: '/admin/careers/applications', label: 'Applications' },
+            ],
+          },
+        ]
+      : []),
     { path: '/admin/settings', icon: Settings, label: 'Settings' },
   ];
 

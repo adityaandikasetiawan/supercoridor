@@ -25,8 +25,12 @@ export function Login() {
         if (result.error === 'LOCKED' && result.lockUntil) {
           const minutesLeft = Math.max(1, Math.ceil((result.lockUntil - Date.now()) / 60000));
           setError(`Terlalu banyak percobaan login. Coba lagi dalam ${minutesLeft} menit.`);
+        } else if (result.error === 'SERVER_UNAVAILABLE') {
+          setError('Server API belum berjalan. Jalankan backend di port 4000 (npm run dev:server).');
         } else if (result.error === 'NOT_CONFIGURED') {
           setError('Login admin belum dikonfigurasi untuk production.');
+        } else if (result.error === 'INTERNAL') {
+          setError('Terjadi kesalahan di server. Silakan cek log backend.');
         } else {
           setError('Email atau password salah.');
         }
@@ -105,8 +109,17 @@ export function Login() {
           <div className="mt-8 p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600 mb-2">Demo Credentials:</p>
             <p className="text-sm">
-              <strong>Email:</strong> admin@supercorridor.com<br />
-              <strong>Password:</strong> admin123
+              <strong>Super Admin</strong><br />
+              <span>Email:</span> admin@supercorridor.com<br />
+              <span>Password:</span> admin123<br />
+              <br />
+              <strong>Content</strong><br />
+              <span>Email:</span> content@supercorridor.com<br />
+              <span>Password:</span> content123<br />
+              <br />
+              <strong>HR</strong><br />
+              <span>Email:</span> hr@supercorridor.com<br />
+              <span>Password:</span> hr123
             </p>
           </div>
         )}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ChevronDown, LogIn, Search } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -9,6 +10,7 @@ export function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const searchRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
+  const { lang, toggleLang, t } = useLanguage();
 
   const toggleDropdown = (menu: string) => {
     setOpenDropdown(openDropdown === menu ? null : menu);
@@ -19,27 +21,45 @@ export function Navbar() {
     setSearchQuery('');
   };
 
-  const searchItems = useMemo(
-    () => [
-      { label: 'Home', to: '/', group: 'General' },
-      { label: 'Network Coverage', to: '/network-coverage', group: 'General' },
-      { label: 'Contact us', to: '/contact', group: 'General' },
-      { label: 'Karir', to: '/careers', group: 'Careers' },
-      { label: 'Dedicated Connectivity', to: '/solutions/dedicated-connectivity', group: 'Solutions' },
-      { label: 'Backbone & Network Infrastructure', to: '/solutions/backbone-network', group: 'Solutions' },
-      { label: 'Cloud & Interconnection Services', to: '/solutions/cloud-interconnection', group: 'Solutions' },
-      { label: 'Value-Added Services', to: '/solutions/value-added-services', group: 'Solutions' },
-      { label: 'Company Overview', to: '/about/company-overview', group: 'About' },
-      { label: 'Vision & Mission', to: '/about/vision-mission', group: 'About' },
-      { label: 'Leadership Team', to: '/about/leadership', group: 'About' },
-      { label: 'Milestones', to: '/about/milestones', group: 'About' },
-      { label: 'Articles & Insights', to: '/resources/insights', group: 'Resources' },
-      { label: 'Case Studies', to: '/resources/case-studies', group: 'Resources' },
-      { label: 'FAQ', to: '/resources/faq', group: 'Resources' },
-      { label: 'TGCS', to: '/tgcs-project', group: 'Projects' },
-    ],
-    [],
-  );
+  const searchItems = useMemo(() => {
+    const groups =
+      lang === 'id'
+        ? {
+            general: 'Umum',
+            careers: 'Karir',
+            solutions: 'Solusi',
+            about: 'Tentang',
+            resources: 'Sumber Daya',
+            projects: 'Proyek',
+          }
+        : {
+            general: 'General',
+            careers: 'Careers',
+            solutions: 'Solutions',
+            about: 'About',
+            resources: 'Resources',
+            projects: 'Projects',
+          };
+
+    return [
+      { label: t('nav.home'), to: '/', group: groups.general },
+      { label: lang === 'id' ? 'Cakupan Jaringan' : 'Network Coverage', to: '/network-coverage', group: groups.general },
+      { label: t('nav.contactUs'), to: '/contact', group: groups.general },
+      { label: t('nav.careers'), to: '/careers', group: groups.careers },
+      { label: t('nav.dedicatedConnectivity'), to: '/solutions/dedicated-connectivity', group: groups.solutions },
+      { label: t('nav.backboneNetworkInfrastructure'), to: '/solutions/backbone-network', group: groups.solutions },
+      { label: t('nav.cloudInterconnectionServices'), to: '/solutions/cloud-interconnection', group: groups.solutions },
+      { label: t('nav.valueAddedServices'), to: '/solutions/value-added-services', group: groups.solutions },
+      { label: t('nav.companyOverview'), to: '/about/company-overview', group: groups.about },
+      { label: t('nav.visionMission'), to: '/about/vision-mission', group: groups.about },
+      { label: t('nav.leadershipTeam'), to: '/about/leadership', group: groups.about },
+      { label: t('nav.milestones'), to: '/about/milestones', group: groups.about },
+      { label: t('nav.articlesInsights'), to: '/resources/insights', group: groups.resources },
+      { label: t('nav.caseStudies'), to: '/resources/case-studies', group: groups.resources },
+      { label: t('nav.faq'), to: '/resources/faq', group: groups.resources },
+      { label: t('nav.tgcs'), to: '/tgcs-project', group: groups.projects },
+    ];
+  }, [lang, t]);
 
   const filteredSearchItems = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -85,25 +105,30 @@ export function Navbar() {
                 rel="noreferrer"
                 className="text-gray-900 hover:text-orange-600"
               >
-                Personal
+                {t('nav.personal')}
               </a>
               <span className="text-gray-400">|</span>
-              <span className="text-orange-600 font-medium">Business</span>
+              <span className="text-orange-600 font-medium">{t('nav.business')}</span>
             </div>
             <div className="flex items-center space-x-6">
               <Link to="/contact" className="text-gray-700 hover:text-orange-600 transition-colors">
-                Contact us
+                {t('nav.contactUs')}
               </Link>
               <Link to="/resources/faq" className="text-gray-700 hover:text-orange-600 transition-colors">
-                Support
+                {t('nav.support')}
               </Link>
               <Link to="/careers" className="text-gray-700 hover:text-orange-600 transition-colors">
-                Karir
+                {t('nav.careers')}
               </Link>
-              <button className="text-gray-700 hover:text-orange-600">
+              <button
+                className="text-gray-700 hover:text-orange-600 flex items-center gap-2"
+                onClick={() => toggleLang()}
+                aria-label="Change language"
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                 </svg>
+                <span className="text-xs font-semibold">{lang.toUpperCase()}</span>
               </button>
             </div>
           </div>
@@ -131,131 +156,131 @@ export function Navbar() {
           {/* Desktop Menu - Horizontal */}
           <div className="hidden lg:flex items-center space-x-8">
             <Link to="/" className="text-gray-900 hover:text-orange-600 transition-colors py-2">
-              Home
+              {t('nav.home')}
             </Link>
 
             <div className="relative group">
               <button className="text-gray-900 hover:text-orange-600 transition-colors py-2">
-                Technology
+                {t('nav.technology')}
               </button>
               <div className="absolute top-full left-0 mt-0 w-64 bg-white shadow-lg rounded-b-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border-t-2 border-orange-600">
                 <Link
                   to="/solutions/backbone-network"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  Fiber Optic Network
+                  {t('nav.fiberOpticNetwork')}
                 </Link>
                 <Link
                   to="/solutions/cloud-interconnection"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  Cloud Infrastructure
+                  {t('nav.cloudInfrastructure')}
                 </Link>
                 <Link
                   to="/solutions/value-added-services"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  Network Security
+                  {t('nav.networkSecurity')}
                 </Link>
               </div>
             </div>
 
             <div className="relative group">
               <button className="text-gray-900 hover:text-orange-600 transition-colors py-2">
-                Solution
+                {t('nav.solution')}
               </button>
               <div className="absolute top-full left-0 mt-0 w-64 bg-white shadow-lg rounded-b-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border-t-2 border-orange-600">
                 <Link
                   to="/solutions/dedicated-connectivity"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  Dedicated Connectivity
+                  {t('nav.dedicatedConnectivity')}
                 </Link>
                 <Link
                   to="/solutions/backbone-network"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  Backbone & Network Infrastructure
+                  {t('nav.backboneNetworkInfrastructure')}
                 </Link>
                 <Link
                   to="/solutions/cloud-interconnection"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  Cloud & Interconnection Services
+                  {t('nav.cloudInterconnectionServices')}
                 </Link>
                 <Link
                   to="/solutions/value-added-services"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  Value-Added Services
+                  {t('nav.valueAddedServices')}
                 </Link>
                 <Link
                   to="/tgcs-project"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  TGCS
+                  {t('nav.tgcs')}
                 </Link>
               </div>
             </div>
 
             <div className="relative group">
               <button className="text-gray-900 hover:text-orange-600 transition-colors py-2">
-                About Us
+                {t('nav.aboutUs')}
               </button>
               <div className="absolute top-full left-0 mt-0 w-56 bg-white shadow-lg rounded-b-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border-t-2 border-orange-600">
                 <Link
                   to="/about/company-overview"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  Company Overview
+                  {t('nav.companyOverview')}
                 </Link>
                 <Link
                   to="/about/vision-mission"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  Vision & Mission
+                  {t('nav.visionMission')}
                 </Link>
                 <Link
                   to="/about/leadership"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  Leadership Team
+                  {t('nav.leadershipTeam')}
                 </Link>
                 <Link
                   to="/about/milestones"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  Milestones
+                  {t('nav.milestones')}
                 </Link>
               </div>
             </div>
 
             <Link to="/network-coverage" className="text-gray-900 hover:text-orange-600 transition-colors py-2">
-              Network
+              {t('nav.network')}
             </Link>
 
             <div className="relative group">
               <button className="text-gray-900 hover:text-orange-600 transition-colors py-2">
-                Resources
+                {t('nav.resources')}
               </button>
               <div className="absolute top-full left-0 mt-0 w-56 bg-white shadow-lg rounded-b-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border-t-2 border-orange-600">
                 <Link
                   to="/resources/insights"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  Articles & Insights
+                  {t('nav.articlesInsights')}
                 </Link>
                 <Link
                   to="/resources/case-studies"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  Case Studies
+                  {t('nav.caseStudies')}
                 </Link>
                 <Link
                   to="/resources/faq"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
-                  FAQ
+                  {t('nav.faq')}
                 </Link>
               </div>
             </div>
@@ -267,14 +292,14 @@ export function Navbar() {
               to="/admin/login"
               className="text-gray-900 hover:text-orange-600 transition-colors"
             >
-              Log in
+              {t('nav.login')}
             </Link>
             
             <button
               onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
               className="flex items-center text-gray-900 hover:text-orange-600 transition-colors"
             >
-              Search SuperCorridor
+              {t('nav.search')}
               <Search className="w-4 h-4 ml-2" />
             </button>
           </div>
@@ -295,7 +320,7 @@ export function Navbar() {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="What can we help you find today?"
+                  placeholder={t('nav.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -336,12 +361,19 @@ export function Navbar() {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="lg:hidden py-4 border-t">
+            <button
+              className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 flex items-center justify-between"
+              onClick={() => toggleLang()}
+            >
+              <span>{lang === 'id' ? 'Bahasa' : 'Language'}</span>
+              <span className="text-xs font-semibold">{lang.toUpperCase()}</span>
+            </button>
             <Link
               to="/"
               className="block px-4 py-2 text-gray-700 hover:bg-gray-50"
               onClick={() => setIsMenuOpen(false)}
             >
-              Home
+              {t('nav.home')}
             </Link>
 
             {/* Mobile Technology Dropdown */}
@@ -350,7 +382,7 @@ export function Navbar() {
                 className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 flex items-center justify-between"
                 onClick={() => toggleDropdown('technology')}
               >
-                Technology
+                {t('nav.technology')}
                 <ChevronDown className={`w-4 h-4 transition-transform ${openDropdown === 'technology' ? 'rotate-180' : ''}`} />
               </button>
               {openDropdown === 'technology' && (
@@ -360,21 +392,21 @@ export function Navbar() {
                     className="block px-8 py-2 text-gray-600 hover:text-orange-500"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Fiber Optic Network
+                    {t('nav.fiberOpticNetwork')}
                   </Link>
                   <Link
                     to="/solutions/cloud-interconnection"
                     className="block px-8 py-2 text-gray-600 hover:text-orange-500"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Cloud Infrastructure
+                    {t('nav.cloudInfrastructure')}
                   </Link>
                   <Link
                     to="/solutions/value-added-services"
                     className="block px-8 py-2 text-gray-600 hover:text-orange-500"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Network Security
+                    {t('nav.networkSecurity')}
                   </Link>
                 </div>
               )}
@@ -386,7 +418,7 @@ export function Navbar() {
                 className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 flex items-center justify-between"
                 onClick={() => toggleDropdown('solutions')}
               >
-                Solution
+                {t('nav.solution')}
                 <ChevronDown className={`w-4 h-4 transition-transform ${openDropdown === 'solutions' ? 'rotate-180' : ''}`} />
               </button>
               {openDropdown === 'solutions' && (
@@ -396,28 +428,28 @@ export function Navbar() {
                     className="block px-8 py-2 text-gray-600 hover:text-orange-500"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Dedicated Connectivity
+                    {t('nav.dedicatedConnectivity')}
                   </Link>
                   <Link
                     to="/solutions/backbone-network"
                     className="block px-8 py-2 text-gray-600 hover:text-orange-500"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Backbone & Network Infrastructure
+                    {t('nav.backboneNetworkInfrastructure')}
                   </Link>
                   <Link
                     to="/solutions/cloud-interconnection"
                     className="block px-8 py-2 text-gray-600 hover:text-orange-500"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Cloud & Interconnection Services
+                    {t('nav.cloudInterconnectionServices')}
                   </Link>
                   <Link
                     to="/solutions/value-added-services"
                     className="block px-8 py-2 text-gray-600 hover:text-orange-500"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Value-Added Services
+                    {t('nav.valueAddedServices')}
                   </Link>
                 </div>
               )}
@@ -429,7 +461,7 @@ export function Navbar() {
                 className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 flex items-center justify-between"
                 onClick={() => toggleDropdown('about')}
               >
-                About Us
+                {t('nav.aboutUs')}
                 <ChevronDown className={`w-4 h-4 transition-transform ${openDropdown === 'about' ? 'rotate-180' : ''}`} />
               </button>
               {openDropdown === 'about' && (
@@ -439,28 +471,28 @@ export function Navbar() {
                     className="block px-8 py-2 text-gray-600 hover:text-orange-500"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Company Overview
+                    {t('nav.companyOverview')}
                   </Link>
                   <Link
                     to="/about/vision-mission"
                     className="block px-8 py-2 text-gray-600 hover:text-orange-500"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Vision & Mission
+                    {t('nav.visionMission')}
                   </Link>
                   <Link
                     to="/about/leadership"
                     className="block px-8 py-2 text-gray-600 hover:text-orange-500"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Leadership Team
+                    {t('nav.leadershipTeam')}
                   </Link>
                   <Link
                     to="/about/milestones"
                     className="block px-8 py-2 text-gray-600 hover:text-orange-500"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Milestones
+                    {t('nav.milestones')}
                   </Link>
                 </div>
               )}
@@ -471,7 +503,7 @@ export function Navbar() {
               className="block px-4 py-2 text-gray-700 hover:bg-gray-50"
               onClick={() => setIsMenuOpen(false)}
             >
-              Network
+              {t('nav.network')}
             </Link>
 
             {/* Mobile Resources Dropdown */}
@@ -480,7 +512,7 @@ export function Navbar() {
                 className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 flex items-center justify-between"
                 onClick={() => toggleDropdown('resources')}
               >
-                Resources
+                {t('nav.resources')}
                 <ChevronDown className={`w-4 h-4 transition-transform ${openDropdown === 'resources' ? 'rotate-180' : ''}`} />
               </button>
               {openDropdown === 'resources' && (
@@ -490,21 +522,21 @@ export function Navbar() {
                     className="block px-8 py-2 text-gray-600 hover:text-green-600"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Insights / Articles
+                    {t('nav.articlesInsights')}
                   </Link>
                   <Link
                     to="/resources/case-studies"
                     className="block px-8 py-2 text-gray-600 hover:text-green-600"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Case Studies
+                    {t('nav.caseStudies')}
                   </Link>
                   <Link
                     to="/resources/faq"
                     className="block px-8 py-2 text-gray-600 hover:text-green-600"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    FAQ
+                    {t('nav.faq')}
                   </Link>
                 </div>
               )}
@@ -515,14 +547,14 @@ export function Navbar() {
               className="block px-4 py-2 text-gray-700 hover:bg-gray-50"
               onClick={() => setIsMenuOpen(false)}
             >
-              Careers
+              {t('nav.careers')}
             </Link>
             <Link
               to="/contact"
               className="block px-4 py-2 mx-4 my-2 text-center bg-orange-500 text-white rounded-lg hover:bg-orange-600"
               onClick={() => setIsMenuOpen(false)}
             >
-              Contact
+              {lang === 'id' ? 'Kontak' : 'Contact'}
             </Link>
             <Link
               to="/admin/login"
@@ -530,7 +562,7 @@ export function Navbar() {
               onClick={() => setIsMenuOpen(false)}
             >
               <LogIn className="w-4 h-4 mr-2" />
-              Login
+              {t('nav.login')}
             </Link>
           </div>
         )}

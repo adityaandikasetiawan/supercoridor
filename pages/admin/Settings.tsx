@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
+import { useAuth } from '../../contexts/AuthContext';
 import { Save, User, Lock, Bell, Globe } from 'lucide-react';
 
 export function Settings() {
   const [saved, setSaved] = useState(false);
+  const { user } = useAuth();
+  const role = user?.role === 'admin' ? 'super_admin' : user?.role;
+  const roleLabel =
+    role === 'super_admin' ? 'Super Admin' : role === 'content' ? 'Content Admin' : role === 'hr' ? 'HR' : 'Admin';
 
   const handleSave = () => {
     setSaved(true);
@@ -61,7 +66,7 @@ export function Settings() {
             <label className="block text-sm mb-2">Role</label>
             <input
               type="text"
-              defaultValue="Administrator"
+              value={roleLabel}
               disabled
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50"
             />

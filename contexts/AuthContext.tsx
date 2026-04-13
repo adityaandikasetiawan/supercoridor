@@ -16,7 +16,11 @@ interface User {
 
 type LoginResult =
   | { ok: true }
-  | { ok: false; error: 'INVALID_CREDENTIALS' | 'LOCKED' | 'NOT_CONFIGURED'; lockUntil?: number };
+  | {
+      ok: false;
+      error: 'INVALID_CREDENTIALS' | 'LOCKED' | 'NOT_CONFIGURED' | 'SERVER_UNAVAILABLE' | 'INTERNAL';
+      lockUntil?: number;
+    };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -114,14 +118,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string): Promise<LoginResult> => {
-      const response = await apiFetch('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
+      let response: Response;
+      try {
+        response = await apiFetch('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password }),
+        });
+      } catch {
+        return { ok: false, error: 'SERVER_UNAVAILABLE' };
+      }
 
-      const body = (await response.json().catch(() => null)) as
+      const contentType = response.headers.get('content-type') ?? '';
+      const isJson = contentType.includes('application/json');
+      const body = (isJson ? await response.json().catch(() => null) : null) as
         | { ok: true; user: User }
-        | { ok: false; error: 'INVALID_CREDENTIALS' | 'LOCKED' | 'NOT_CONFIGURED'; lockUntil?: number }
+        | { ok: false; error: 'INVALID_CREDENTIALS' | 'LOCKED' | 'NOT_CONFIGURED' | 'INTERNAL'; lockUntil?: number }
         | null;
 
       if (response.ok && body && body.ok) {
@@ -136,6 +147,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.status === 500 && body && !body.ok && body.error === 'NOT_CONFIGURED') {
         return { ok: false, error: 'NOT_CONFIGURED' };
+      }
+
+      if (response.status >= 500 && (!isJson || !body)) {
+        return { ok: false, error: 'SERVER_UNAVAILABLE' };
+      }
+
+      if (response.status >= 500 && body && !body.ok && body.error === 'INTERNAL') {
+        return { ok: false, error: 'INTERNAL' };
       }
 
       return { ok: false, error: 'INVALID_CREDENTIALS' };

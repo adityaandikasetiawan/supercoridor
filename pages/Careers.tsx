@@ -2,9 +2,25 @@ import { useEffect, useMemo, useState } from 'react';
 import { Search, MapPin, Briefcase, Clock, Users, ArrowRight, TrendingUp, Heart, Star, Filter } from 'lucide-react';
 import { apiFetch } from '../utils/storage';
 
+type JobListing = {
+  id: string;
+  title: string;
+  department: string;
+  location: string;
+  type: string;
+  level: string;
+  salary: string;
+  description: string;
+  requirements: string[];
+  skills: string[];
+  featured: boolean;
+  applicants: number;
+  postedDays: number;
+};
+
 const fallbackJobListings = [
   {
-    id: 1,
+    id: '1',
     title: 'Senior Network Engineer',
     department: 'Engineering',
     location: 'Jakarta',
@@ -19,7 +35,7 @@ const fallbackJobListings = [
     postedDays: 2,
   },
   {
-    id: 2,
+    id: '2',
     title: 'Enterprise Account Manager',
     department: 'Sales',
     location: 'Jakarta',
@@ -34,7 +50,7 @@ const fallbackJobListings = [
     postedDays: 3,
   },
   {
-    id: 3,
+    id: '3',
     title: 'Customer Success Specialist',
     department: 'Customer Support',
     location: 'Jakarta',
@@ -49,7 +65,7 @@ const fallbackJobListings = [
     postedDays: 5,
   },
   {
-    id: 4,
+    id: '4',
     title: 'NOC Engineer (Network Operations Center)',
     department: 'Operations',
     location: 'Jakarta',
@@ -64,7 +80,7 @@ const fallbackJobListings = [
     postedDays: 4,
   },
   {
-    id: 5,
+    id: '5',
     title: 'Solutions Architect',
     department: 'Pre-Sales',
     location: 'Jakarta',
@@ -79,7 +95,7 @@ const fallbackJobListings = [
     postedDays: 1,
   },
   {
-    id: 6,
+    id: '6',
     title: 'Security Operations Analyst',
     department: 'Security',
     location: 'Jakarta',
@@ -94,7 +110,7 @@ const fallbackJobListings = [
     postedDays: 6,
   },
   {
-    id: 7,
+    id: '7',
     title: 'DevOps Engineer',
     department: 'Engineering',
     location: 'Jakarta / Remote',
@@ -109,7 +125,7 @@ const fallbackJobListings = [
     postedDays: 7,
   },
   {
-    id: 8,
+    id: '8',
     title: 'Technical Support Engineer',
     department: 'Customer Support',
     location: 'Surabaya',
@@ -126,12 +142,41 @@ const fallbackJobListings = [
 ];
 
 export function Careers() {
-  const [jobListings, setJobListings] = useState(fallbackJobListings);
+  const [jobListings, setJobListings] = useState<JobListing[]>(fallbackJobListings);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
+  const [applyOpen, setApplyOpen] = useState(false);
+  const [applySubmitting, setApplySubmitting] = useState(false);
+  const [applySuccess, setApplySuccess] = useState<string | null>(null);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [applyForm, setApplyForm] = useState({
+    applicantName: '',
+    email: '',
+    phone: '',
+    nik: '',
+    birthPlace: '',
+    birthDate: '',
+    gender: '',
+    maritalStatus: '',
+    address: '',
+    city: '',
+    postalCode: '',
+    educationLevel: '',
+    institution: '',
+    major: '',
+    gpa: '',
+    experience: '',
+    expectedSalary: '',
+    availableStartDate: '',
+    emergencyName: '',
+    emergencyPhone: '',
+    coverLetter: '',
+  });
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,7 +195,7 @@ export function Careers() {
           return 'Mid-Senior';
         };
 
-        const next = data.jobs
+        const next: JobListing[] = data.jobs
           .filter((j: any) => j && typeof j === 'object')
           .map((j: any, index: number) => {
             const posted = typeof j.posted === 'string' ? j.posted : '';
@@ -196,6 +241,124 @@ export function Careers() {
       cancelled = true;
     };
   }, []);
+
+  const openApply = (job: JobListing) => {
+    setSelectedJob(job);
+    setApplyOpen(true);
+    setApplySubmitting(false);
+    setApplySuccess(null);
+    setApplyError(null);
+    setResumeFile(null);
+    setApplyForm((prev) => ({
+      ...prev,
+      city: prev.city || job.location,
+    }));
+  };
+
+  const closeApply = () => {
+    setApplyOpen(false);
+    setApplySubmitting(false);
+    setApplyError(null);
+    setResumeFile(null);
+  };
+
+  const submitApplication = async () => {
+    if (!selectedJob) return;
+    if (!resumeFile) {
+      setApplyError('CV wajib diupload (PDF/DOC/DOCX).');
+      return;
+    }
+    if (
+      !applyForm.applicantName ||
+      !applyForm.email ||
+      !applyForm.phone ||
+      !applyForm.nik ||
+      !applyForm.birthDate ||
+      !applyForm.gender ||
+      !applyForm.address ||
+      !applyForm.city ||
+      !applyForm.educationLevel ||
+      !applyForm.institution ||
+      !applyForm.major ||
+      !applyForm.expectedSalary ||
+      !applyForm.emergencyName ||
+      !applyForm.emergencyPhone ||
+      !applyForm.experience
+    ) {
+      setApplyError('Mohon lengkapi semua field yang wajib diisi.');
+      return;
+    }
+    setApplySubmitting(true);
+    setApplyError(null);
+    setApplySuccess(null);
+    try {
+      const formData = new FormData();
+      formData.append('jobId', selectedJob.id);
+      formData.append('applicantName', applyForm.applicantName);
+      formData.append('email', applyForm.email);
+      formData.append('phone', applyForm.phone);
+      formData.append('nik', applyForm.nik);
+      formData.append('birthPlace', applyForm.birthPlace);
+      formData.append('birthDate', applyForm.birthDate);
+      formData.append('gender', applyForm.gender);
+      formData.append('maritalStatus', applyForm.maritalStatus);
+      formData.append('address', applyForm.address);
+      formData.append('city', applyForm.city);
+      formData.append('postalCode', applyForm.postalCode);
+      formData.append('educationLevel', applyForm.educationLevel);
+      formData.append('institution', applyForm.institution);
+      formData.append('major', applyForm.major);
+      formData.append('gpa', applyForm.gpa);
+      formData.append('experience', applyForm.experience);
+      formData.append('expectedSalary', applyForm.expectedSalary);
+      formData.append('availableStartDate', applyForm.availableStartDate);
+      formData.append('emergencyName', applyForm.emergencyName);
+      formData.append('emergencyPhone', applyForm.emergencyPhone);
+      formData.append('coverLetter', applyForm.coverLetter);
+      formData.append('resume', resumeFile);
+
+      const res = await apiFetch('/api/careers/apply', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setApplyError('Gagal mengirim lamaran. Coba lagi.');
+        setApplySubmitting(false);
+        return;
+      }
+      setApplySuccess('Lamaran berhasil dikirim. Terima kasih!');
+      setApplySubmitting(false);
+      setApplyForm({
+        applicantName: '',
+        email: '',
+        phone: '',
+        nik: '',
+        birthPlace: '',
+        birthDate: '',
+        gender: '',
+        maritalStatus: '',
+        address: '',
+        city: '',
+        postalCode: '',
+        educationLevel: '',
+        institution: '',
+        major: '',
+        gpa: '',
+        experience: '',
+        expectedSalary: '',
+        availableStartDate: '',
+        emergencyName: '',
+        emergencyPhone: '',
+        coverLetter: '',
+      });
+      setResumeFile(null);
+    } catch (err) {
+      void err;
+      setApplyError('Gagal mengirim lamaran. Coba lagi.');
+      setApplySubmitting(false);
+    }
+  };
 
   const departments = useMemo(() => {
     const set = new Set<string>();
@@ -387,6 +550,7 @@ export function Careers() {
                       <div
                         key={job.id}
                         className="bg-white border-2 border-orange-200 rounded-lg p-6 hover:shadow-xl transition-all hover:border-orange-400 cursor-pointer"
+                        onClick={() => openApply(job)}
                       >
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
@@ -434,13 +598,24 @@ export function Careers() {
                               💰 {job.salary}
                             </div>
                           </div>
-                          <button className="ml-4 p-2 hover:bg-gray-100 rounded-full transition-colors">
+                          <button
+                            className="ml-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
                             <Heart className="w-6 h-6 text-gray-400 hover:text-red-500" />
                           </button>
                         </div>
                         <div className="flex items-center justify-between pt-4 border-t">
                           <span className="text-sm text-gray-500">Posted {job.postedDays} days ago</span>
-                          <button className="flex items-center bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors">
+                          <button
+                            className="flex items-center bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openApply(job);
+                            }}
+                          >
                             Apply Now
                             <ArrowRight className="w-4 h-4 ml-2" />
                           </button>
@@ -462,6 +637,7 @@ export function Careers() {
                       <div
                         key={job.id}
                         className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:shadow-lg transition-all hover:border-blue-300 cursor-pointer"
+                        onClick={() => openApply(job)}
                       >
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
@@ -506,13 +682,24 @@ export function Careers() {
                               💰 {job.salary}
                             </div>
                           </div>
-                          <button className="ml-4 p-2 hover:bg-gray-100 rounded-full transition-colors">
+                          <button
+                            className="ml-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
                             <Heart className="w-6 h-6 text-gray-400 hover:text-red-500" />
                           </button>
                         </div>
                         <div className="flex items-center justify-between pt-4 border-t">
                           <span className="text-sm text-gray-500">Posted {job.postedDays} days ago</span>
-                          <button className="flex items-center bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                          <button
+                            className="flex items-center bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openApply(job);
+                            }}
+                          >
                             Apply Now
                             <ArrowRight className="w-4 h-4 ml-2" />
                           </button>
@@ -587,6 +774,236 @@ export function Careers() {
           </a>
         </div>
       </section>
+
+      {applyOpen && selectedJob && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          onClick={() => closeApply()}
+        >
+          <div
+            className="bg-white rounded-xl w-full max-w-2xl max-h-[85vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-gray-200 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl text-gray-900">{selectedJob.title}</h3>
+                <div className="mt-1 text-gray-600 flex flex-wrap gap-4">
+                  <span className="flex items-center">
+                    <Briefcase className="w-4 h-4 mr-1" />
+                    {selectedJob.department}
+                  </span>
+                  <span className="flex items-center">
+                    <MapPin className="w-4 h-4 mr-1" />
+                    {selectedJob.location}
+                  </span>
+                  <span className="flex items-center">
+                    <Clock className="w-4 h-4 mr-1" />
+                    {selectedJob.type}
+                  </span>
+                </div>
+              </div>
+              <button className="text-gray-500 hover:text-gray-900" onClick={() => closeApply()}>
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 className="text-gray-900 mb-2">Requirements</h4>
+                <ul className="list-disc pl-5 text-gray-700 space-y-1">
+                  {selectedJob.requirements.slice(0, 8).map((r, idx) => (
+                    <li key={idx}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input
+                  value={applyForm.applicantName}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, applicantName: e.target.value }))}
+                  placeholder="Nama lengkap *"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+                <input
+                  value={applyForm.email}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, email: e.target.value }))}
+                  placeholder="Email *"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+                <input
+                  value={applyForm.phone}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, phone: e.target.value }))}
+                  placeholder="No. HP *"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+                <input
+                  value={applyForm.nik}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, nik: e.target.value }))}
+                  placeholder="NIK *"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+
+                <input
+                  value={applyForm.birthPlace}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, birthPlace: e.target.value }))}
+                  placeholder="Tempat lahir"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+                <input
+                  type="date"
+                  value={applyForm.birthDate}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, birthDate: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+
+                <select
+                  value={applyForm.gender}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, gender: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                >
+                  <option value="">Jenis kelamin *</option>
+                  <option value="male">Laki-laki</option>
+                  <option value="female">Perempuan</option>
+                </select>
+                <select
+                  value={applyForm.maritalStatus}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, maritalStatus: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                >
+                  <option value="">Status pernikahan</option>
+                  <option value="single">Belum menikah</option>
+                  <option value="married">Menikah</option>
+                  <option value="divorced">Cerai hidup</option>
+                  <option value="widowed">Cerai mati</option>
+                </select>
+
+                <textarea
+                  value={applyForm.address}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, address: e.target.value }))}
+                  placeholder="Alamat lengkap *"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent min-h-[88px] md:col-span-2"
+                />
+
+                <input
+                  value={applyForm.city}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, city: e.target.value }))}
+                  placeholder="Kota domisili *"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+                <input
+                  value={applyForm.postalCode}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, postalCode: e.target.value }))}
+                  placeholder="Kode pos"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+
+                <select
+                  value={applyForm.educationLevel}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, educationLevel: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                >
+                  <option value="">Pendidikan terakhir *</option>
+                  <option value="SMA/SMK">SMA/SMK</option>
+                  <option value="D3">D3</option>
+                  <option value="S1">S1</option>
+                  <option value="S2">S2</option>
+                  <option value="S3">S3</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+                <input
+                  value={applyForm.institution}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, institution: e.target.value }))}
+                  placeholder="Institusi *"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+                <input
+                  value={applyForm.major}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, major: e.target.value }))}
+                  placeholder="Jurusan *"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+                <input
+                  value={applyForm.gpa}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, gpa: e.target.value }))}
+                  placeholder="IPK (opsional)"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+
+                <input
+                  value={applyForm.experience}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, experience: e.target.value }))}
+                  placeholder="Pengalaman (contoh: 3 tahun) *"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+                <input
+                  value={applyForm.expectedSalary}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, expectedSalary: e.target.value }))}
+                  placeholder="Gaji yang diharapkan *"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+
+                <input
+                  type="date"
+                  value={applyForm.availableStartDate}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, availableStartDate: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+                <input
+                  value={applyForm.emergencyName}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, emergencyName: e.target.value }))}
+                  placeholder="Nama kontak darurat *"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+                <input
+                  value={applyForm.emergencyPhone}
+                  onChange={(e) => setApplyForm((p) => ({ ...p, emergencyPhone: e.target.value }))}
+                  placeholder="No. kontak darurat *"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+
+                <div className="md:col-span-2">
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                  />
+                  <div className="mt-1 text-xs text-gray-600">
+                    {resumeFile ? `File terpilih: ${resumeFile.name}` : 'Upload CV (PDF/DOC/DOCX)'}
+                  </div>
+                </div>
+              </div>
+
+              <textarea
+                value={applyForm.coverLetter}
+                onChange={(e) => setApplyForm((p) => ({ ...p, coverLetter: e.target.value }))}
+                placeholder="Cover letter (opsional)"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent min-h-[120px]"
+              />
+
+              {applyError && <div className="text-red-600">{applyError}</div>}
+              {applySuccess && <div className="text-green-700">{applySuccess}</div>}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                  onClick={() => closeApply()}
+                  disabled={applySubmitting}
+                >
+                  Batal
+                </button>
+                <button
+                  className="px-5 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-60"
+                  onClick={() => submitApplication()}
+                  disabled={applySubmitting}
+                >
+                  {applySubmitting ? 'Mengirim...' : 'Kirim Lamaran'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
