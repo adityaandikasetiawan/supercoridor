@@ -1,6 +1,24 @@
+import { useEffect, useState } from 'react';
 import { Building2, Quote } from 'lucide-react';
 
-const testimonials = [
+interface Testimonial {
+  id: string;
+  customerName: string;
+  position: string;
+  company: string;
+  content: string;
+  rating: number;
+  avatar: string;
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  logo: string;
+  industry: string;
+}
+
+const defaultTestimonials = [
   {
     company: 'TechCorp Indonesia',
     industry: 'Technology',
@@ -45,7 +63,7 @@ const testimonials = [
   },
 ];
 
-const industries = [
+const defaultIndustries = [
   'Financial Services',
   'Healthcare',
   'Technology',
@@ -61,6 +79,44 @@ const industries = [
 ];
 
 export function Customers() {
+  const [testimonials, setTestimonials] = useState(defaultTestimonials);
+  const [industries, setIndustries] = useState(defaultIndustries);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await fetch('/api/content/customers');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.customers) {
+            // Map API testimonials to display format
+            if (data.customers.testimonials && data.customers.testimonials.length > 0) {
+              const colors = ['orange', 'blue', 'green'];
+              setTestimonials(
+                data.customers.testimonials.map((t: Testimonial, i: number) => ({
+                  company: t.company,
+                  industry: '',
+                  person: `${t.customerName}, ${t.position}`,
+                  quote: t.content,
+                  color: colors[i % 3],
+                }))
+              );
+            }
+            // Extract unique industries from customers
+            if (data.customers.customers && data.customers.customers.length > 0) {
+              const uniqueIndustries = [...new Set(data.customers.customers.map((c: Customer) => c.industry))].filter(Boolean) as string[];
+              if (uniqueIndustries.length > 0) {
+                setIndustries(uniqueIndustries);
+              }
+            }
+          }
+        }
+      } catch {
+        // use defaults
+      }
+    };
+    void load();
+  }, []);
   return (
     <div>
       {/* Hero */}

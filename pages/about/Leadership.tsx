@@ -1,45 +1,49 @@
+import { useEffect, useState } from 'react';
 import { Linkedin, Mail } from 'lucide-react';
 
-const leaders = [
-  {
-    name: 'John Anderson',
-    title: 'Chief Executive Officer',
-    bio: 'With over 25 years in telecommunications, John leads SuperCorridor\'s strategic vision and growth.',
-    color: 'orange',
-  },
-  {
-    name: 'Sarah Chen',
-    title: 'Chief Technology Officer',
-    bio: 'Sarah drives our technology innovation and oversees our network infrastructure development.',
-    color: 'blue',
-  },
-  {
-    name: 'Michael Roberts',
-    title: 'Chief Operating Officer',
-    bio: 'Michael ensures operational excellence and service delivery across all our client engagements.',
-    color: 'green',
-  },
-  {
-    name: 'Lisa Martinez',
-    title: 'Chief Financial Officer',
-    bio: 'Lisa manages our financial strategy and investor relations, driving sustainable growth.',
-    color: 'orange',
-  },
-  {
-    name: 'David Kumar',
-    title: 'VP of Sales & Marketing',
-    bio: 'David leads our go-to-market strategy and builds lasting relationships with enterprise clients.',
-    color: 'blue',
-  },
-  {
-    name: 'Emily Wong',
-    title: 'VP of Customer Success',
-    bio: 'Emily ensures our clients receive exceptional support and achieve their connectivity goals.',
-    color: 'green',
-  },
+interface Leader {
+  name: string;
+  title: string;
+  bio: string;
+  color: string;
+}
+
+const defaultLeaders: Leader[] = [
+  { name: 'John Anderson', title: 'Chief Executive Officer', bio: "With over 25 years in telecommunications, John leads SuperCorridor's strategic vision and growth.", color: 'orange' },
+  { name: 'Sarah Chen', title: 'Chief Technology Officer', bio: 'Sarah drives our technology innovation and oversees our network infrastructure development.', color: 'blue' },
+  { name: 'Michael Roberts', title: 'Chief Operating Officer', bio: 'Michael ensures operational excellence and service delivery across all our client engagements.', color: 'green' },
+  { name: 'Lisa Martinez', title: 'Chief Financial Officer', bio: 'Lisa manages our financial strategy and investor relations, driving sustainable growth.', color: 'orange' },
+  { name: 'David Kumar', title: 'VP of Sales & Marketing', bio: 'David leads our go-to-market strategy and builds lasting relationships with enterprise clients.', color: 'blue' },
+  { name: 'Emily Wong', title: 'VP of Customer Success', bio: 'Emily ensures our clients receive exceptional support and achieve their connectivity goals.', color: 'green' },
 ];
 
 export function Leadership() {
+  const [leaders, setLeaders] = useState<Leader[]>(defaultLeaders);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await fetch('/api/content/pages/about-leadership');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.data?.teamMembers && result.data.teamMembers.length > 0) {
+            const colors = ['orange', 'blue', 'green'];
+            setLeaders(
+              result.data.teamMembers.map((m: { name: string; position: string; bio: string }, i: number) => ({
+                name: m.name,
+                title: m.position,
+                bio: m.bio,
+                color: colors[i % 3],
+              }))
+            );
+          }
+        }
+      } catch {
+        // use defaults
+      }
+    };
+    void load();
+  }, []);
   return (
     <div>
       {/* Hero */}

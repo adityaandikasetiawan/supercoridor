@@ -7,7 +7,7 @@ export function TGCSProject() {
   const [tgcsData, setTgcsData] = useState(() => ({
     hero: {
       title: 'SuperCorridor TGCS',
-      subtitle: 'Trans Gunung Cyber Subsea Cable System',
+      subtitle: 'Trans Global Cable System',
       description:
         'A state-of-the-art submarine cable system connecting strategic locations across Indonesia with world-class reliability and capacity.',
       enabled: true,
@@ -102,7 +102,7 @@ export function TGCSProject() {
             <div>
               <h3 className="text-2xl lg:text-3xl text-gray-900 mb-4">Strategic Connectivity</h3>
               <p className="text-lg text-gray-600 mb-6">
-                The Trans Gunung Cyber Subsea Cable System (TGCS) is designed to connect major 
+                The Trans Global Cable System (TGCS) is designed to connect major 
                 business hubs across Indonesia, providing low-latency, high-capacity connectivity 
                 that supports the growing demands of digital transformation.
               </p>

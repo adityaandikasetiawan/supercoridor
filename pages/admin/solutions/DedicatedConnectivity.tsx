@@ -1,46 +1,32 @@
-import { useState } from 'react';
 import { AdminLayout } from '../../../components/AdminLayout';
 import { Save } from 'lucide-react';
+import { useAdminContent } from '../../../hooks/useAdminContent';
 
 export function AdminSolutionsDedicatedConnectivity() {
-  const [formData, setFormData] = useState({
+  const defaultData = {
     title: 'Dedicated Connectivity Solutions',
     subtitle: 'Reliable, high-speed dedicated internet access for your business',
     heroImage: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa',
     description:
       'Our dedicated connectivity solutions provide your business with guaranteed bandwidth and superior performance. With symmetric upload and download speeds, your critical applications run smoothly without interruption.',
     features: [
-      {
-        title: 'Guaranteed Bandwidth',
-        description: 'Dedicated line with no contention - your bandwidth is yours alone',
-      },
-      {
-        title: 'Symmetric Speed',
-        description: 'Equal upload and download speeds for seamless communication',
-      },
-      {
-        title: '99.99% SLA',
-        description: 'Industry-leading uptime guarantee with proactive monitoring',
-      },
-      {
-        title: '24/7 Support',
-        description: 'Round-the-clock technical support from certified engineers',
-      },
+      { title: 'Guaranteed Bandwidth', description: 'Dedicated line with no contention - your bandwidth is yours alone' },
+      { title: 'Symmetric Speed', description: 'Equal upload and download speeds for seamless communication' },
+      { title: '99.99% SLA', description: 'Industry-leading uptime guarantee with proactive monitoring' },
+      { title: '24/7 Support', description: 'Round-the-clock technical support from certified engineers' },
     ],
     packages: [
       { name: 'Starter', speed: '10 Mbps', price: 'IDR 5,000,000', features: ['Dedicated Line', 'SLA 99.9%', 'Email Support'] },
       { name: 'Business', speed: '50 Mbps', price: 'IDR 15,000,000', features: ['Dedicated Line', 'SLA 99.99%', '24/7 Support', 'Free Installation'] },
       { name: 'Enterprise', speed: '100 Mbps+', price: 'Custom', features: ['Dedicated Line', 'SLA 99.99%', '24/7 Priority Support', 'Managed Services'] },
     ],
-  });
+  };
 
-  const [isSaved, setIsSaved] = useState(false);
+  const { data: formData, setData: setFormData, saved: isSaved, save } = useAdminContent('solutions-dedicated-connectivity', defaultData);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Save logic here
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    await save();
   };
 
   const updateFeature = (index: number, field: string, value: string) => {

@@ -1,6 +1,23 @@
+import { useEffect, useState } from 'react';
 import { MapPin, CheckCircle, Globe } from 'lucide-react';
 
-const regions = [
+interface CoverageCity {
+  id: string;
+  name: string;
+  province: string;
+  pops: number;
+  status: 'active' | 'coming-soon';
+}
+
+interface CoverageData {
+  title: string;
+  description: string;
+  totalPops: number;
+  totalCities: number;
+  cities: CoverageCity[];
+}
+
+const defaultRegions = [
   {
     name: 'Jakarta & Greater Area',
     cities: ['Jakarta', 'Tangerang', 'Bekasi', 'Depok', 'Bogor'],
@@ -34,15 +51,59 @@ const regions = [
 ];
 
 export function NetworkCoverage() {
+  const [coverageData, setCoverageData] = useState<CoverageData | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await fetch('/api/content/network-coverage');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.networkCoverage) {
+            setCoverageData(data.networkCoverage);
+          }
+        }
+      } catch {
+        // use default display
+      }
+    };
+    void load();
+  }, []);
+
+  // Group cities by province for display if we have API data
+  const apiCities = coverageData?.cities?.filter((c) => c.status === 'active') ?? [];
+  const hasApiCities = apiCities.length > 0;
+
+  // Group API cities by province
+  const cityGroups = hasApiCities
+    ? Object.entries(
+        apiCities.reduce<Record<string, string[]>>((acc, city) => {
+          if (!acc[city.province]) acc[city.province] = [];
+          acc[city.province].push(city.name);
+          return acc;
+        }, {})
+      ).map(([province, cities], index) => ({
+        name: province,
+        cities,
+        color: ['orange', 'blue', 'green'][index % 3],
+      }))
+    : defaultRegions;
+
+  const totalCities = coverageData?.totalCities ?? 50;
+  const totalPops = coverageData?.totalPops ?? 150;
+
   return (
     <div>
       {/* Hero */}
       <section className="bg-gradient-to-r from-green-600 to-green-700 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-5xl mb-6">Network & Coverage</h1>
+            <h1 className="text-4xl lg:text-5xl mb-6">
+              {coverageData?.title ?? 'Network & Coverage'}
+            </h1>
             <p className="text-xl opacity-90">
-              Extensive fiber-optic infrastructure spanning across 50+ cities, connecting your business to the digital world.
+              {coverageData?.description ??
+                'Extensive fiber-optic infrastructure spanning across 50+ cities, connecting your business to the digital world.'}
             </p>
           </div>
         </div>
@@ -56,7 +117,7 @@ export function NetworkCoverage() {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-500 text-white rounded-full mb-4">
                 <MapPin className="w-8 h-8" />
               </div>
-              <div className="text-4xl mb-2 text-orange-600">50+</div>
+              <div className="text-4xl mb-2 text-orange-600">{totalCities}+</div>
               <div className="text-xl text-gray-700">Cities Covered</div>
             </div>
 
@@ -64,8 +125,8 @@ export function NetworkCoverage() {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 text-white rounded-full mb-4">
                 <Globe className="w-8 h-8" />
               </div>
-              <div className="text-4xl mb-2 text-blue-600">10,000+</div>
-              <div className="text-xl text-gray-700">Kilometers of Fiber</div>
+              <div className="text-4xl mb-2 text-blue-600">{totalPops}+</div>
+              <div className="text-xl text-gray-700">Points of Presence</div>
             </div>
 
             <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
@@ -90,7 +151,7 @@ export function NetworkCoverage() {
           <div>
             <h2 className="text-3xl mb-8 text-center">Regional Coverage</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {regions.map((region, index) => (
+              {cityGroups.map((region, index) => (
                 <div
                   key={index}
                   className={`p-6 rounded-lg ${

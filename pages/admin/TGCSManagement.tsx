@@ -8,7 +8,7 @@ export function AdminTGCSManagement() {
   const [tgcsData, setTgcsData] = useState(() => ({
     hero: {
       title: 'SuperCorridor TGCS',
-      subtitle: 'Trans Gunung Cyber Subsea Cable System',
+      subtitle: 'Trans Global Cable System',
       description:
         'A state-of-the-art submarine cable system connecting strategic locations across Indonesia with world-class reliability and capacity.',
       enabled: true,

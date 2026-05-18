@@ -1,34 +1,4 @@
-// Storage utility for syncing data between admin and public pages
-
-export const STORAGE_KEYS = {
-  HERO_SLIDES: 'hero_slides',
-  TGCS_DATA: 'tgcs_data',
-} as const;
-
-// Helper functions to get data from localStorage
-export const getHeroSlides = () => {
-  const saved = localStorage.getItem(STORAGE_KEYS.HERO_SLIDES);
-  if (saved) {
-    return JSON.parse(saved);
-  }
-  return null;
-};
-
-export const getTGCSData = () => {
-  const saved = localStorage.getItem(STORAGE_KEYS.TGCS_DATA);
-  if (saved) {
-    return JSON.parse(saved);
-  }
-  return null;
-};
-
-export const setHeroSlides = (data: any) => {
-  localStorage.setItem(STORAGE_KEYS.HERO_SLIDES, JSON.stringify(data));
-};
-
-export const setTGCSData = (data: any) => {
-  localStorage.setItem(STORAGE_KEYS.TGCS_DATA, JSON.stringify(data));
-};
+// Storage utility — API fetch with CSRF and token refresh
 
 export const getCookieValue = (name: string) => {
   const encoded = encodeURIComponent(name) + '=';
@@ -42,7 +12,7 @@ export const getCookieValue = (name: string) => {
   return null;
 };
 
-export const apiFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+export const apiFetch = async (input: RequestInfo | URL, init?: RequestInit, attemptRefresh = true): Promise<Response> => {
   const method = (init?.method ?? 'GET').toUpperCase();
   let csrfToken =
     method === 'GET' || method === 'HEAD' || method === 'OPTIONS' ? null : getCookieValue('csrf_token');
@@ -51,12 +21,30 @@ export const apiFetch = async (input: RequestInfo | URL, init?: RequestInit) => 
     csrfToken = getCookieValue('csrf_token');
   }
 
-  return fetch(input, {
+  const response = await fetch(input, {
     ...init,
     credentials: 'include',
     headers: {
+      'Content-Type': 'application/json',
       ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
       ...(init?.headers ?? {}),
     },
   });
+
+  if (response.status !== 401 || !attemptRefresh) return response;
+
+  // Attempt token refresh
+  const refreshCsrfToken = getCookieValue('csrf_token');
+  const refreshResponse = await fetch('/api/auth/refresh', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      ...(refreshCsrfToken ? { 'x-csrf-token': refreshCsrfToken } : {}),
+    },
+  });
+
+  if (!refreshResponse.ok) return response;
+
+  // Retry original request after successful refresh
+  return apiFetch(input, init, false);
 };

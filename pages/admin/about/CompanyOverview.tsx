@@ -1,9 +1,9 @@
-import { useState } from 'react';
 import { AdminLayout } from '../../../components/AdminLayout';
 import { Save } from 'lucide-react';
+import { useAdminContent } from '../../../hooks/useAdminContent';
 
 export function AdminAboutCompanyOverview() {
-  const [formData, setFormData] = useState({
+  const defaultData = {
     title: 'Company Overview',
     subtitle: 'Leading Internet Service Provider in Indonesia',
     heroImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab',
@@ -15,31 +15,18 @@ export function AdminAboutCompanyOverview() {
     customers: '1,000+',
     coverage: '50+ Cities',
     values: [
-      {
-        title: 'Innovation',
-        description: 'Continuously advancing our technology and services',
-      },
-      {
-        title: 'Reliability',
-        description: 'Delivering consistent, high-quality connectivity',
-      },
-      {
-        title: 'Customer Focus',
-        description: 'Putting our clients needs at the forefront',
-      },
-      {
-        title: 'Integrity',
-        description: 'Operating with transparency and ethical standards',
-      },
+      { title: 'Innovation', description: 'Continuously advancing our technology and services' },
+      { title: 'Reliability', description: 'Delivering consistent, high-quality connectivity' },
+      { title: 'Customer Focus', description: 'Putting our clients needs at the forefront' },
+      { title: 'Integrity', description: 'Operating with transparency and ethical standards' },
     ],
-  });
+  };
 
-  const [isSaved, setIsSaved] = useState(false);
+  const { data: formData, setData: setFormData, saved: isSaved, save } = useAdminContent('about-company-overview', defaultData);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    await save();
   };
 
   const updateValue = (index: number, field: string, value: string) => {

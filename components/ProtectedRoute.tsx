@@ -9,10 +9,9 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { isAuthenticated, user } = useAuth();
 
-  const effectiveRole = user?.role === 'admin' ? 'super_admin' : user?.role;
   const allowed = allowedRoles ?? ['super_admin', 'content', 'hr'];
 
-  if (!isAuthenticated || !user || !effectiveRole || !allowed.includes(effectiveRole)) {
+  if (!isAuthenticated || !user || !user.role || !allowed.includes(user.role)) {
     return <Navigate to="/admin/login" replace />;
   }
 

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AdminLayout } from '../../components/AdminLayout';
 import {
@@ -6,40 +7,50 @@ import {
   Mail,
   FileText,
   TrendingUp,
-  Eye,
   Network,
   Home,
 } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
 export function Dashboard() {
+  const [dashboardStats, setDashboardStats] = useState({
+    totalMessages: 0,
+    newMessages: 0,
+    totalApplications: 0,
+    newApplications: 0,
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await apiFetch('/api/admin/dashboard-stats', { method: 'GET' });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.stats) setDashboardStats(data.stats);
+        }
+      } catch {
+        // use defaults
+      }
+    };
+    void load();
+  }, []);
+
   const stats = [
     {
-      label: 'Total Visitors',
-      value: '12,543',
-      change: '+12.5%',
-      icon: Eye,
-      color: 'orange',
-    },
-    {
       label: 'Contact Messages',
-      value: '89',
-      change: '+5.2%',
+      value: String(dashboardStats.totalMessages),
+      change: `${dashboardStats.newMessages} new`,
       icon: Mail,
-      color: 'blue',
+      bgClass: 'bg-blue-100',
+      textClass: 'text-blue-600',
     },
     {
       label: 'Job Applications',
-      value: '234',
-      change: '+18.3%',
+      value: String(dashboardStats.totalApplications),
+      change: `${dashboardStats.newApplications} new`,
       icon: Briefcase,
-      color: 'green',
-    },
-    {
-      label: 'Active Customers',
-      value: '542',
-      change: '+8.7%',
-      icon: Users,
-      color: 'orange',
+      bgClass: 'bg-green-100',
+      textClass: 'text-green-600',
     },
   ];
 
@@ -49,42 +60,48 @@ export function Dashboard() {
       description: 'Update hero section, stats, and featured content',
       icon: Home,
       link: '/admin/home',
-      color: 'orange',
+      bgClass: 'bg-orange-100',
+      textClass: 'text-orange-600',
     },
     {
       title: 'Network Coverage',
       description: 'Update coverage map and network information',
       icon: Network,
       link: '/admin/network-coverage',
-      color: 'blue',
+      bgClass: 'bg-blue-100',
+      textClass: 'text-blue-600',
     },
     {
       title: 'Articles & Resources',
       description: 'Manage insights, case studies, and FAQs',
       icon: FileText,
       link: '/admin/resources/insights',
-      color: 'green',
+      bgClass: 'bg-green-100',
+      textClass: 'text-green-600',
     },
     {
       title: 'View Messages',
       description: 'Check and respond to contact inquiries',
       icon: Mail,
       link: '/admin/contact',
-      color: 'orange',
+      bgClass: 'bg-orange-100',
+      textClass: 'text-orange-600',
     },
     {
       title: 'Careers & Jobs',
       description: 'Manage job postings and applications',
       icon: Briefcase,
       link: '/admin/careers/jobs',
-      color: 'blue',
+      bgClass: 'bg-blue-100',
+      textClass: 'text-blue-600',
     },
     {
       title: 'Customers',
       description: 'Manage customer logos and testimonials',
       icon: Users,
       link: '/admin/customers',
-      color: 'green',
+      bgClass: 'bg-green-100',
+      textClass: 'text-green-600',
     },
   ];
 
@@ -104,16 +121,14 @@ export function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid md:grid-cols-2 gap-6 mb-8">
         {stats.map((stat, index) => (
           <div key={index} className="bg-white rounded-xl shadow-sm p-6 border-2 border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <div
-                className={`p-3 rounded-lg bg-${stat.color}-100`}
-              >
-                <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
+              <div className={`p-3 rounded-lg ${stat.bgClass}`}>
+                <stat.icon className={`w-6 h-6 ${stat.textClass}`} />
               </div>
-              <span className="text-green-600 text-sm">{stat.change}</span>
+              <span className="text-orange-600 text-sm">{stat.change}</span>
             </div>
             <p className="text-gray-600 text-sm mb-1">{stat.label}</p>
             <p className="text-3xl">{stat.value}</p>
@@ -132,9 +147,9 @@ export function Dashboard() {
               className="bg-white rounded-xl shadow-sm p-6 border-2 border-gray-100 hover:border-orange-500 hover:shadow-lg transition-all group"
             >
               <div
-                className={`inline-flex p-3 rounded-lg bg-${action.color}-100 mb-4 group-hover:scale-110 transition-transform`}
+                className={`inline-flex p-3 rounded-lg ${action.bgClass} mb-4 group-hover:scale-110 transition-transform`}
               >
-                <action.icon className={`w-6 h-6 text-${action.color}-600`} />
+                <action.icon className={`w-6 h-6 ${action.textClass}`} />
               </div>
               <h3 className="text-lg mb-2 group-hover:text-orange-600 transition-colors">
                 {action.title}

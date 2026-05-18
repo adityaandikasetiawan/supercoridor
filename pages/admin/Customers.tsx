@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Plus, Edit, Trash2 } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
 interface Customer {
   id: string;
@@ -20,54 +21,46 @@ interface Testimonial {
 }
 
 export function AdminCustomers() {
-  const [customers, setCustomers] = useState<Customer[]>([
-    {
-      id: '1',
-      name: 'PT Bank Central Asia',
-      logo: 'https://via.placeholder.com/150x80?text=BCA',
-      industry: 'Banking',
-    },
-    {
-      id: '2',
-      name: 'PT Telkom Indonesia',
-      logo: 'https://via.placeholder.com/150x80?text=Telkom',
-      industry: 'Telecommunications',
-    },
-    {
-      id: '3',
-      name: 'PT Astra International',
-      logo: 'https://via.placeholder.com/150x80?text=Astra',
-      industry: 'Automotive',
-    },
-  ]);
-
-  const [testimonials, setTestimonials] = useState<Testimonial[]>([
-    {
-      id: '1',
-      customerName: 'John Smith',
-      position: 'CTO',
-      company: 'Tech Corp Indonesia',
-      content:
-        'SuperCorridor has been instrumental in our digital transformation. Their reliable network and excellent support have exceeded our expectations.',
-      rating: 5,
-      avatar: 'https://i.pravatar.cc/150?img=1',
-    },
-    {
-      id: '2',
-      customerName: 'Sarah Johnson',
-      position: 'IT Director',
-      company: 'Global Finance Ltd',
-      content:
-        'The 99.99% uptime guarantee is not just a promise - they deliver. Our operations have never been smoother.',
-      rating: 5,
-      avatar: 'https://i.pravatar.cc/150?img=2',
-    },
-  ]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isTestimonialModalOpen, setIsTestimonialModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await apiFetch('/api/admin/content/customers', { method: 'GET' });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.customers) {
+            setCustomers(data.customers.customers ?? []);
+            setTestimonials(data.customers.testimonials ?? []);
+          }
+        }
+      } catch {
+        // use defaults
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, []);
+
+  const saveToServer = async (c: Customer[], t: Testimonial[]) => {
+    const response = await apiFetch('/api/admin/content/customers', {
+      method: 'PUT',
+      body: JSON.stringify({ customers: { customers: c, testimonials: t } }),
+    });
+    if (response.ok) {
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+    }
+  };
 
   const [customerForm, setCustomerForm] = useState({
     name: '',
@@ -113,41 +106,47 @@ export function AdminCustomers() {
     setIsTestimonialModalOpen(true);
   };
 
-  const handleSubmitCustomer = (e: React.FormEvent) => {
+  const handleSubmitCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
+    let updated: Customer[];
     if (editingCustomer) {
-      setCustomers(
-        customers.map((c) => (c.id === editingCustomer.id ? { ...customerForm, id: c.id } : c))
-      );
+      updated = customers.map((c) => (c.id === editingCustomer.id ? { ...customerForm, id: c.id } : c));
     } else {
-      setCustomers([...customers, { ...customerForm, id: Date.now().toString() }]);
+      updated = [...customers, { ...customerForm, id: Date.now().toString() }];
     }
+    setCustomers(updated);
     setIsCustomerModalOpen(false);
+    await saveToServer(updated, testimonials);
   };
 
-  const handleSubmitTestimonial = (e: React.FormEvent) => {
+  const handleSubmitTestimonial = async (e: React.FormEvent) => {
     e.preventDefault();
+    let updated: Testimonial[];
     if (editingTestimonial) {
-      setTestimonials(
-        testimonials.map((t) =>
-          t.id === editingTestimonial.id ? { ...testimonialForm, id: t.id } : t
-        )
+      updated = testimonials.map((t) =>
+        t.id === editingTestimonial.id ? { ...testimonialForm, id: t.id } : t
       );
     } else {
-      setTestimonials([...testimonials, { ...testimonialForm, id: Date.now().toString() }]);
+      updated = [...testimonials, { ...testimonialForm, id: Date.now().toString() }];
     }
+    setTestimonials(updated);
     setIsTestimonialModalOpen(false);
+    await saveToServer(customers, updated);
   };
 
-  const handleDeleteCustomer = (id: string) => {
+  const handleDeleteCustomer = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this customer?')) {
-      setCustomers(customers.filter((c) => c.id !== id));
+      const updated = customers.filter((c) => c.id !== id);
+      setCustomers(updated);
+      await saveToServer(updated, testimonials);
     }
   };
 
-  const handleDeleteTestimonial = (id: string) => {
+  const handleDeleteTestimonial = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this testimonial?')) {
-      setTestimonials(testimonials.filter((t) => t.id !== id));
+      const updated = testimonials.filter((t) => t.id !== id);
+      setTestimonials(updated);
+      await saveToServer(customers, updated);
     }
   };
 
@@ -160,6 +159,18 @@ export function AdminCustomers() {
           <p className="text-gray-600 mt-1">Manage customer logos and testimonials</p>
         </div>
 
+        {isSaved && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+            Changes saved successfully!
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[30vh]">
+            <p className="text-gray-500">Loading...</p>
+          </div>
+        ) : (
+        <>
         {/* Customer Logos Section */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex justify-between items-center mb-6">
@@ -263,6 +274,8 @@ export function AdminCustomers() {
             ))}
           </div>
         </div>
+        </>
+        )}
 
         {/* Customer Modal */}
         {isCustomerModalOpen && (

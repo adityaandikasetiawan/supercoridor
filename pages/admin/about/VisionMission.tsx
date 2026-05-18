@@ -1,9 +1,9 @@
-import { useState } from 'react';
 import { AdminLayout } from '../../../components/AdminLayout';
 import { Save } from 'lucide-react';
+import { useAdminContent } from '../../../hooks/useAdminContent';
 
 export function AdminAboutVisionMission() {
-  const [formData, setFormData] = useState({
+  const defaultData = {
     title: 'Vision & Mission',
     heroImage: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40',
     vision:
@@ -16,31 +16,18 @@ export function AdminAboutVisionMission() {
       'Foster partnerships that create value for our customers',
     ],
     goals: [
-      {
-        title: 'Expand Coverage',
-        description: 'Reach 100+ cities by 2025',
-      },
-      {
-        title: 'Enhance Reliability',
-        description: 'Maintain 99.99% uptime across all services',
-      },
-      {
-        title: 'Drive Innovation',
-        description: 'Launch next-gen connectivity solutions',
-      },
-      {
-        title: 'Customer Satisfaction',
-        description: 'Achieve 95%+ customer satisfaction rate',
-      },
+      { title: 'Expand Coverage', description: 'Reach 100+ cities by 2025' },
+      { title: 'Enhance Reliability', description: 'Maintain 99.99% uptime across all services' },
+      { title: 'Drive Innovation', description: 'Launch next-gen connectivity solutions' },
+      { title: 'Customer Satisfaction', description: 'Achieve 95%+ customer satisfaction rate' },
     ],
-  });
+  };
 
-  const [isSaved, setIsSaved] = useState(false);
+  const { data: formData, setData: setFormData, saved: isSaved, save } = useAdminContent('about-vision-mission', defaultData);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    await save();
   };
 
   const updateMissionItem = (index: number, value: string) => {

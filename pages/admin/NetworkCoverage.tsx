@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Save, Plus } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
 interface CoverageCity {
   id: string;
@@ -8,6 +9,14 @@ interface CoverageCity {
   province: string;
   pops: number;
   status: 'active' | 'coming-soon';
+}
+
+interface CoverageData {
+  title: string;
+  description: string;
+  totalPops: number;
+  totalCities: number;
+  cities: CoverageCity[];
 }
 
 export function AdminNetworkCoverage() {
@@ -37,10 +46,51 @@ export function AdminNetworkCoverage() {
     status: 'active' as 'active' | 'coming-soon',
   });
 
-  const handleSaveGeneral = (e: React.FormEvent) => {
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await apiFetch('/api/admin/content/network-coverage', { method: 'GET' });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.networkCoverage) {
+            const nc = data.networkCoverage as CoverageData;
+            setCoverageData({
+              title: nc.title,
+              description: nc.description,
+              totalPops: nc.totalPops,
+              totalCities: nc.totalCities,
+            });
+            if (nc.cities) setCities(nc.cities);
+          }
+        }
+      } catch {
+        // use defaults
+      }
+    };
+    void load();
+  }, []);
+
+  const saveToServer = async (generalData: typeof coverageData, cityData: CoverageCity[]) => {
+    const payload = {
+      networkCoverage: {
+        ...generalData,
+        cities: cityData,
+      },
+    };
+    const response = await apiFetch('/api/admin/content/network-coverage', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    return response.ok;
+  };
+
+  const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    const ok = await saveToServer(coverageData, cities);
+    if (ok) {
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+    }
   };
 
   const handleOpenModal = (city?: CoverageCity) => {
@@ -54,19 +104,24 @@ export function AdminNetworkCoverage() {
     setIsModalOpen(true);
   };
 
-  const handleSubmitCity = (e: React.FormEvent) => {
+  const handleSubmitCity = async (e: React.FormEvent) => {
     e.preventDefault();
+    let updatedCities: CoverageCity[];
     if (editingCity) {
-      setCities(cities.map((c) => (c.id === editingCity.id ? { ...cityForm, id: c.id } : c)));
+      updatedCities = cities.map((c) => (c.id === editingCity.id ? { ...cityForm, id: c.id } : c));
     } else {
-      setCities([...cities, { ...cityForm, id: Date.now().toString() }]);
+      updatedCities = [...cities, { ...cityForm, id: Date.now().toString() }];
     }
+    setCities(updatedCities);
     setIsModalOpen(false);
+    await saveToServer(coverageData, updatedCities);
   };
 
-  const handleDeleteCity = (id: string) => {
+  const handleDeleteCity = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this city?')) {
-      setCities(cities.filter((c) => c.id !== id));
+      const updatedCities = cities.filter((c) => c.id !== id);
+      setCities(updatedCities);
+      await saveToServer(coverageData, updatedCities);
     }
   };
 
@@ -159,60 +214,28 @@ export function AdminNetworkCoverage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">
-                    City
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">
-                    Province
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">
-                    PoPs
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">City</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Province</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">PoPs</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {cities.map((city) => (
                   <tr key={city.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4"><div className="text-sm text-gray-900">{city.name}</div></td>
+                    <td className="px-6 py-4"><div className="text-sm text-gray-600">{city.province}</div></td>
+                    <td className="px-6 py-4"><div className="text-sm text-gray-900">{city.pops}</div></td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{city.name}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-600">{city.province}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{city.pops}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          city.status === 'active'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}
-                      >
+                      <span className={`text-xs px-2 py-1 rounded ${city.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                         {city.status === 'active' ? 'Active' : 'Coming Soon'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => handleOpenModal(city)}
-                          className="text-blue-600 hover:text-blue-700 text-sm"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCity(city.id)}
-                          className="text-red-600 hover:text-red-700 text-sm"
-                        >
-                          Delete
-                        </button>
+                        <button onClick={() => handleOpenModal(city)} className="text-blue-600 hover:text-blue-700 text-sm">Edit</button>
+                        <button onClick={() => handleDeleteCity(city.id)} className="text-red-600 hover:text-red-700 text-sm">Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -227,73 +250,30 @@ export function AdminNetworkCoverage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-lg w-full">
               <div className="p-6">
-                <h2 className="text-xl text-gray-900 mb-4">
-                  {editingCity ? 'Edit City' : 'Add New City'}
-                </h2>
+                <h2 className="text-xl text-gray-900 mb-4">{editingCity ? 'Edit City' : 'Add New City'}</h2>
                 <form onSubmit={handleSubmitCity} className="space-y-4">
                   <div>
                     <label className="block text-sm text-gray-700 mb-1">City Name</label>
-                    <input
-                      type="text"
-                      value={cityForm.name}
-                      onChange={(e) => setCityForm({ ...cityForm, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      required
-                    />
+                    <input type="text" value={cityForm.name} onChange={(e) => setCityForm({ ...cityForm, name: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" required />
                   </div>
                   <div>
                     <label className="block text-sm text-gray-700 mb-1">Province</label>
-                    <input
-                      type="text"
-                      value={cityForm.province}
-                      onChange={(e) => setCityForm({ ...cityForm, province: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      required
-                    />
+                    <input type="text" value={cityForm.province} onChange={(e) => setCityForm({ ...cityForm, province: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" required />
                   </div>
                   <div>
                     <label className="block text-sm text-gray-700 mb-1">Number of PoPs</label>
-                    <input
-                      type="number"
-                      value={cityForm.pops}
-                      onChange={(e) =>
-                        setCityForm({ ...cityForm, pops: parseInt(e.target.value) })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      min="1"
-                      required
-                    />
+                    <input type="number" value={cityForm.pops} onChange={(e) => setCityForm({ ...cityForm, pops: parseInt(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" min="1" required />
                   </div>
                   <div>
                     <label className="block text-sm text-gray-700 mb-1">Status</label>
-                    <select
-                      value={cityForm.status}
-                      onChange={(e) =>
-                        setCityForm({
-                          ...cityForm,
-                          status: e.target.value as 'active' | 'coming-soon',
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    >
+                    <select value={cityForm.status} onChange={(e) => setCityForm({ ...cityForm, status: e.target.value as 'active' | 'coming-soon' })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
                       <option value="active">Active</option>
                       <option value="coming-soon">Coming Soon</option>
                     </select>
                   </div>
                   <div className="flex gap-3 pt-4">
-                    <button
-                      type="submit"
-                      className="flex-1 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
-                    >
-                      {editingCity ? 'Update' : 'Add'} City
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsModalOpen(false)}
-                      className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
-                    >
-                      Cancel
-                    </button>
+                    <button type="submit" className="flex-1 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">{editingCity ? 'Update' : 'Add'} City</button>
+                    <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
                   </div>
                 </form>
               </div>

@@ -11,18 +11,39 @@ export function Contact() {
     message: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitState, setSubmitState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    alert('Thank you for your interest! Our team will contact you shortly.');
-    setFormData({
-      name: '',
-      email: '',
-      company: '',
-      phone: '',
-      interest: '',
-      message: '',
-    });
+    setSubmitState('loading');
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          company: formData.company,
+          subject: formData.interest || 'General Inquiry',
+          message: formData.message,
+        }),
+      });
+
+      if (response.ok) {
+        setSubmitState('success');
+        setFormData({ name: '', email: '', company: '', phone: '', interest: '', message: '' });
+        setTimeout(() => setSubmitState('idle'), 5000);
+      } else {
+        setSubmitState('error');
+        setTimeout(() => setSubmitState('idle'), 5000);
+      }
+    } catch {
+      setSubmitState('error');
+      setTimeout(() => setSubmitState('idle'), 5000);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -151,10 +172,23 @@ export function Contact() {
 
                 <button
                   type="submit"
-                  className="w-full bg-orange-500 text-white px-8 py-3 rounded-lg hover:bg-orange-600 transition-colors"
+                  disabled={submitState === 'loading'}
+                  className="w-full bg-orange-500 text-white px-8 py-3 rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Submit
+                  {submitState === 'loading' ? 'Sending...' : 'Submit'}
                 </button>
+
+                {submitState === 'success' && (
+                  <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+                    Thank you for your interest! Our team will contact you shortly.
+                  </div>
+                )}
+
+                {submitState === 'error' && (
+                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                    Something went wrong. Please try again or contact us directly.
+                  </div>
+                )}
               </form>
             </div>
 

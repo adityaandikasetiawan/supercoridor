@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Search, Mail, Phone, Calendar, Eye, Trash2, Check } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
 interface ContactMessage {
-  id: number;
+  id: string;
   name: string;
   email: string;
   phone: string;
@@ -17,53 +18,53 @@ interface ContactMessage {
 export function ManageContact() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [messages, setMessages] = useState<ContactMessage[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const messages: ContactMessage[] = [
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john.doe@telkom.co.id',
-      phone: '+62 812-3456-7890',
-      company: 'PT. Telkom Indonesia',
-      subject: 'Inquiry about Dedicated Connectivity',
-      message: 'We are interested in your 10 Gbps dedicated fiber service for our Jakarta office. Please send us a quotation.',
-      date: '2026-01-02 10:30',
-      status: 'new',
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane.smith@bca.co.id',
-      phone: '+62 813-9876-5432',
-      company: 'Bank Central Asia',
-      subject: 'SD-WAN Solution for Multi-Branch',
-      message: 'We need SD-WAN solution to connect 50+ branches across Indonesia. Can we schedule a meeting?',
-      date: '2026-01-02 09:15',
-      status: 'read',
-    },
-    {
-      id: 3,
-      name: 'Ahmad Rahman',
-      email: 'ahmad.rahman@pertamina.com',
-      phone: '+62 821-5555-6666',
-      company: 'PT. Pertamina',
-      subject: 'Cloud Interconnection Services',
-      message: 'Looking for direct connection to AWS and Azure for our enterprise applications.',
-      date: '2026-01-01 16:45',
-      status: 'responded',
-    },
-    {
-      id: 4,
-      name: 'Sarah Johnson',
-      email: 'sarah.j@startup.id',
-      phone: '+62 856-7777-8888',
-      company: 'Tech Startup Indonesia',
-      subject: 'Small Business Internet Package',
-      message: 'What packages do you offer for small businesses? We need 100 Mbps connection.',
-      date: '2026-01-01 14:20',
-      status: 'new',
-    },
-  ];
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await apiFetch('/api/admin/content/contact-messages', { method: 'GET' });
+        if (response.ok) {
+          const data = await response.json();
+          setMessages(data.messages ?? []);
+        }
+      } catch {
+        // silently fail, show empty state
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, []);
+
+  const handleMarkAsRead = async (id: string) => {
+    const updated = messages.map((m) => (m.id === id ? { ...m, status: 'read' as const } : m));
+    setMessages(updated);
+    await apiFetch('/api/admin/content/contact-messages', {
+      method: 'PUT',
+      body: JSON.stringify({ messages: updated }),
+    });
+  };
+
+  const handleMarkAsResponded = async (id: string) => {
+    const updated = messages.map((m) => (m.id === id ? { ...m, status: 'responded' as const } : m));
+    setMessages(updated);
+    await apiFetch('/api/admin/content/contact-messages', {
+      method: 'PUT',
+      body: JSON.stringify({ messages: updated }),
+    });
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this message?')) return;
+    const updated = messages.filter((m) => m.id !== id);
+    setMessages(updated);
+    await apiFetch('/api/admin/content/contact-messages', {
+      method: 'PUT',
+      body: JSON.stringify({ messages: updated }),
+    });
+  };
 
   const filteredMessages = messages.filter((msg) => {
     const matchesSearch =
@@ -87,6 +88,16 @@ export function ManageContact() {
         return null;
     }
   };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[40vh]">
+          <p className="text-gray-500">Loading messages...</p>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -189,7 +200,10 @@ export function ManageContact() {
                   </span>
                 </div>
               </div>
-              <button className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors">
+              <button
+                onClick={() => handleDelete(msg.id)}
+                className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+              >
                 <Trash2 className="w-5 h-5" />
               </button>
             </div>
@@ -210,12 +224,22 @@ export function ManageContact() {
             </div>
 
             <div className="flex gap-3">
-              <button className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
-                Reply
-              </button>
-              <button className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                Mark as Read
-              </button>
+              {msg.status === 'new' && (
+                <button
+                  onClick={() => handleMarkAsRead(msg.id)}
+                  className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Mark as Read
+                </button>
+              )}
+              {msg.status !== 'responded' && (
+                <button
+                  onClick={() => handleMarkAsResponded(msg.id)}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                >
+                  Mark as Responded
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -225,7 +249,11 @@ export function ManageContact() {
         <div className="bg-white rounded-xl shadow-sm p-12 border-2 border-gray-100 text-center">
           <Mail className="w-16 h-16 mx-auto mb-4 text-gray-300" />
           <h3 className="text-xl mb-2">No messages found</h3>
-          <p className="text-gray-600">Try adjusting your search or filters</p>
+          <p className="text-gray-600">
+            {messages.length === 0
+              ? 'No contact messages have been received yet'
+              : 'Try adjusting your search or filters'}
+          </p>
         </div>
       )}
     </AdminLayout>

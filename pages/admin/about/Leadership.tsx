@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../../components/AdminLayout';
 import { Plus } from 'lucide-react';
+import { apiFetch } from '../../../utils/storage';
 
 interface TeamMember {
   id: string;
@@ -41,6 +42,30 @@ export function AdminAboutLeadership() {
     linkedin: '',
   });
 
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await apiFetch('/api/admin/content/pages/about-leadership', { method: 'GET' });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.data?.teamMembers) {
+            setTeamMembers(result.data.teamMembers);
+          }
+        }
+      } catch {
+        // use defaults
+      }
+    };
+    void load();
+  }, []);
+
+  const saveToServer = async (members: TeamMember[]) => {
+    await apiFetch('/api/admin/content/pages/about-leadership', {
+      method: 'PUT',
+      body: JSON.stringify({ data: { teamMembers: members } }),
+    });
+  };
+
   const handleOpenModal = (member?: TeamMember) => {
     if (member) {
       setEditingMember(member);
@@ -52,21 +77,24 @@ export function AdminAboutLeadership() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let updated: TeamMember[];
     if (editingMember) {
-      setTeamMembers(
-        teamMembers.map((m) => (m.id === editingMember.id ? { ...formData, id: m.id } : m))
-      );
+      updated = teamMembers.map((m) => (m.id === editingMember.id ? { ...formData, id: m.id } : m));
     } else {
-      setTeamMembers([...teamMembers, { ...formData, id: Date.now().toString() }]);
+      updated = [...teamMembers, { ...formData, id: Date.now().toString() }];
     }
+    setTeamMembers(updated);
     setIsModalOpen(false);
+    await saveToServer(updated);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this team member?')) {
-      setTeamMembers(teamMembers.filter((m) => m.id !== id));
+      const updated = teamMembers.filter((m) => m.id !== id);
+      setTeamMembers(updated);
+      await saveToServer(updated);
     }
   };
 

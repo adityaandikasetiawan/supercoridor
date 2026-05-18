@@ -1,40 +1,27 @@
-import { useState } from 'react';
 import { AdminLayout } from '../../../components/AdminLayout';
 import { Save } from 'lucide-react';
+import { useAdminContent } from '../../../hooks/useAdminContent';
 
 export function AdminSolutionsBackboneNetwork() {
-  const [formData, setFormData] = useState({
+  const defaultData = {
     title: 'Backbone & Network Infrastructure',
     subtitle: 'Robust network infrastructure connecting Indonesia',
     heroImage: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31',
     description:
       'Our extensive backbone network provides the foundation for reliable, high-performance connectivity across the nation. With redundant paths and carrier-grade equipment, we ensure your data flows seamlessly.',
     features: [
-      {
-        title: 'Nationwide Coverage',
-        description: 'Extensive fiber optic network spanning major cities',
-      },
-      {
-        title: 'Redundant Paths',
-        description: 'Multiple routes ensure network resilience',
-      },
-      {
-        title: 'Carrier-Grade Equipment',
-        description: 'Enterprise-level hardware for maximum reliability',
-      },
-      {
-        title: 'Scalable Bandwidth',
-        description: 'Easily upgrade capacity as your needs grow',
-      },
+      { title: 'Nationwide Coverage', description: 'Extensive fiber optic network spanning major cities' },
+      { title: 'Redundant Paths', description: 'Multiple routes ensure network resilience' },
+      { title: 'Carrier-Grade Equipment', description: 'Enterprise-level hardware for maximum reliability' },
+      { title: 'Scalable Bandwidth', description: 'Easily upgrade capacity as your needs grow' },
     ],
-  });
+  };
 
-  const [isSaved, setIsSaved] = useState(false);
+  const { data: formData, setData: setFormData, saved: isSaved, save } = useAdminContent('solutions-backbone-network', defaultData);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    await save();
   };
 
   const updateFeature = (index: number, field: string, value: string) => {

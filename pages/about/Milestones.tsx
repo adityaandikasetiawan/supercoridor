@@ -1,69 +1,52 @@
+import { useEffect, useState } from 'react';
 import { CheckCircle } from 'lucide-react';
 
-const milestones = [
-  {
-    year: '2008',
-    title: 'Company Founded',
-    description: 'SuperCorridor was established with a vision to transform enterprise connectivity in Indonesia.',
-    color: 'orange',
-  },
-  {
-    year: '2010',
-    title: 'First 100 Clients',
-    description: 'Reached our first major milestone, serving 100 enterprise customers across Jakarta.',
-    color: 'blue',
-  },
-  {
-    year: '2012',
-    title: 'Network Expansion',
-    description: 'Expanded fiber-optic network to 10 major cities, doubling our coverage area.',
-    color: 'green',
-  },
-  {
-    year: '2014',
-    title: 'Cloud Partnerships',
-    description: 'Established direct connections to AWS, Azure, and Google Cloud platforms.',
-    color: 'orange',
-  },
-  {
-    year: '2016',
-    title: '10 Gbps Milestone',
-    description: 'Launched 10 Gbps dedicated connectivity services for enterprise clients.',
-    color: 'blue',
-  },
-  {
-    year: '2018',
-    title: 'Industry Recognition',
-    description: 'Awarded "Best Enterprise ISP" by Indonesia Telecommunications Association.',
-    color: 'green',
-  },
-  {
-    year: '2020',
-    title: '500+ Clients',
-    description: 'Reached 500 enterprise clients, solidifying our position as a market leader.',
-    color: 'orange',
-  },
-  {
-    year: '2021',
-    title: '100 Gbps Launch',
-    description: 'Introduced 100 Gbps connectivity options for the most demanding enterprise workloads.',
-    color: 'blue',
-  },
-  {
-    year: '2022',
-    title: 'Regional Expansion',
-    description: 'Expanded operations to 50+ cities across Indonesia and neighboring countries.',
-    color: 'green',
-  },
-  {
-    year: '2024',
-    title: 'Innovation Hub',
-    description: 'Opened our Network Innovation Center to develop next-generation connectivity solutions.',
-    color: 'orange',
-  },
+interface MilestoneItem {
+  year: string;
+  title: string;
+  description: string;
+  color: string;
+}
+
+const defaultMilestones: MilestoneItem[] = [
+  { year: '2008', title: 'Company Founded', description: 'SuperCorridor was established with a vision to transform enterprise connectivity in Indonesia.', color: 'orange' },
+  { year: '2010', title: 'First 100 Clients', description: 'Reached our first major milestone, serving 100 enterprise customers across Jakarta.', color: 'blue' },
+  { year: '2012', title: 'Network Expansion', description: 'Expanded fiber-optic network to 10 major cities, doubling our coverage area.', color: 'green' },
+  { year: '2014', title: 'Cloud Partnerships', description: 'Established direct connections to AWS, Azure, and Google Cloud platforms.', color: 'orange' },
+  { year: '2016', title: '10 Gbps Milestone', description: 'Launched 10 Gbps dedicated connectivity services for enterprise clients.', color: 'blue' },
+  { year: '2018', title: 'Industry Recognition', description: 'Awarded "Best Enterprise ISP" by Indonesia Telecommunications Association.', color: 'green' },
+  { year: '2020', title: '500+ Clients', description: 'Reached 500 enterprise clients, solidifying our position as a market leader.', color: 'orange' },
+  { year: '2021', title: '100 Gbps Launch', description: 'Introduced 100 Gbps connectivity options for the most demanding enterprise workloads.', color: 'blue' },
+  { year: '2022', title: 'Regional Expansion', description: 'Expanded operations to 50+ cities across Indonesia and neighboring countries.', color: 'green' },
+  { year: '2024', title: 'Innovation Hub', description: 'Opened our Network Innovation Center to develop next-generation connectivity solutions.', color: 'orange' },
 ];
 
 export function Milestones() {
+  const [milestones, setMilestones] = useState<MilestoneItem[]>(defaultMilestones);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await fetch('/api/content/pages/about-milestones');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.data?.milestones && result.data.milestones.length > 0) {
+            const colors = ['orange', 'blue', 'green'];
+            setMilestones(
+              result.data.milestones.map((m: { year: string; title: string; description: string }, i: number) => ({
+                ...m,
+                color: colors[i % 3],
+              }))
+            );
+          }
+        }
+      } catch {
+        // use defaults
+      }
+    };
+    void load();
+  }, []);
+
   return (
     <div>
       {/* Hero */}

@@ -9,9 +9,25 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import initSqlJs from 'sql.js';
-import { createRequire } from 'node:module';
 import multer from 'multer';
+import {
+  initDatabase,
+  getContentValue,
+  setContentValue,
+  getPageContent,
+  setPageContent,
+  getContactMessages,
+  insertContactMessage,
+  deleteContactMessage,
+  updateContactMessageStatus,
+  getRefreshToken,
+  insertRefreshToken,
+  revokeRefreshToken,
+  revokeAllUserTokens,
+  getSetting,
+  setSetting,
+  query,
+} from './db.mjs';
 
 const app = express();
 
@@ -49,10 +65,6 @@ const LOCKOUT_MS = 15 * 60 * 1000;
 
 const failedLoginState = new Map();
 
-const AUTH_STORE_PATH = process.env.AUTH_STORE_PATH ?? path.join(os.tmpdir(), 'supercorridor-auth-store.json');
-const CONTENT_STORE_PATH =
-  process.env.CONTENT_STORE_PATH ?? path.join(os.tmpdir(), 'supercorridor-content-store.json');
-const SQLITE_DB_PATH = process.env.SQLITE_DB_PATH ?? path.join(os.tmpdir(), 'supercorridor.sqlite');
 const UPLOADS_DIR = process.env.UPLOADS_DIR ?? path.join(os.tmpdir(), 'supercorridor-uploads');
 const RESUME_UPLOAD_DIR = path.join(UPLOADS_DIR, 'resumes');
 const resumeUpload = multer({
@@ -138,156 +150,52 @@ function sha256Base64Url(value) {
   return crypto.createHash('sha256').update(value).digest('base64url');
 }
 
-let storeWriteQueue = Promise.resolve();
-async function withStoreWrite(fn) {
-  storeWriteQueue = storeWriteQueue.then(fn, fn);
-  return storeWriteQueue;
-}
-
-let sqlDbInitPromise = null;
-async function getSqlDb() {
-  if (sqlDbInitPromise) return sqlDbInitPromise;
-  sqlDbInitPromise = (async () => {
-    const require = createRequire(import.meta.url);
-    const wasmPath = require.resolve('sql.js/dist/sql-wasm.wasm');
-    const SQL = await initSqlJs({
-      locateFile() {
-        return wasmPath;
-      },
-    });
-
-    let existing = null;
-    try {
-      existing = await fs.readFile(SQLITE_DB_PATH);
-    } catch {
-      existing = null;
-    }
-
-    const db = existing ? new SQL.Database(new Uint8Array(existing)) : new SQL.Database();
-    db.run(
-      'CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL, updatedAt INTEGER NOT NULL)'
-    );
-
-    const existingAuth = kvGet(db, 'authStore');
-    if (!existingAuth) {
-      try {
-        const raw = await fs.readFile(AUTH_STORE_PATH, 'utf8');
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-          kvSet(db, 'authStore', JSON.stringify(parsed), nowMs());
-        }
-      } catch (err) {
-        void err;
-      }
-    }
-
-    const existingContent = kvGet(db, 'contentStore');
-    if (!existingContent) {
-      try {
-        const raw = await fs.readFile(CONTENT_STORE_PATH, 'utf8');
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-          kvSet(db, 'contentStore', JSON.stringify(parsed), nowMs());
-        }
-      } catch (err) {
-        void err;
-      }
-    }
-
-    await persistSqlDb(db);
-    return db;
-  })();
-  return sqlDbInitPromise;
-}
-
-function kvGet(db, key) {
-  const stmt = db.prepare('SELECT value FROM kv WHERE key = ?');
-  stmt.bind([key]);
-  try {
-    if (!stmt.step()) return null;
-    const row = stmt.getAsObject();
-    return typeof row.value === 'string' ? row.value : null;
-  } finally {
-    stmt.free();
-  }
-}
-
-function kvSet(db, key, value, updatedAtMs) {
-  db.run(
-    'INSERT INTO kv(key, value, updatedAt) VALUES(?, ?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updatedAt=excluded.updatedAt',
-    [key, value, updatedAtMs]
-  );
-}
-
-async function persistSqlDb(db) {
-  const bytes = db.export();
-  await fs.mkdir(path.dirname(SQLITE_DB_PATH), { recursive: true });
-  await fs.writeFile(SQLITE_DB_PATH, Buffer.from(bytes));
-}
-
-async function readStore() {
-  try {
-    const db = await getSqlDb();
-    const raw = kvGet(db, 'authStore');
-    if (!raw) return { refreshTokens: {} };
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return { refreshTokens: {} };
-    if (!parsed.refreshTokens || typeof parsed.refreshTokens !== 'object') return { refreshTokens: {} };
-    return { refreshTokens: parsed.refreshTokens };
-  } catch {
-    return { refreshTokens: {} };
-  }
-}
-
-async function writeStore(next) {
-  const db = await getSqlDb();
-  kvSet(db, 'authStore', JSON.stringify(next), nowMs());
-  await persistSqlDb(db);
-}
-
-async function revokeAllRefreshTokensForUser(userId) {
-  await withStoreWrite(async () => {
-    const store = await readStore();
-    const now = nowMs();
-    for (const [jti, entry] of Object.entries(store.refreshTokens)) {
-      if (entry && entry.userId === userId && !entry.revokedAt) {
-        store.refreshTokens[jti] = { ...entry, revokedAt: now };
-      }
-    }
-    await writeStore(store);
-  });
-}
-
-let contentWriteQueue = Promise.resolve();
-async function withContentWrite(fn) {
-  contentWriteQueue = contentWriteQueue.then(fn, fn);
-  return contentWriteQueue;
-}
-
+// --- PostgreSQL-backed store functions ---
 async function readContentStore() {
-  try {
-    const db = await getSqlDb();
-    const raw = kvGet(db, 'contentStore');
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return {};
-    return parsed;
-  } catch {
-    return {};
+  // Returns a combined object of all content_store rows for backward compatibility
+  const result = await query('SELECT key, value FROM content_store');
+  const store = {};
+  for (const row of result.rows) {
+    store[row.key] = row.value;
   }
+  return store;
 }
 
 async function writeContentStore(next) {
-  const db = await getSqlDb();
-  kvSet(db, 'contentStore', JSON.stringify(next), nowMs());
-  await persistSqlDb(db);
+  // Write each key individually
+  for (const [key, value] of Object.entries(next)) {
+    if (key.endsWith('UpdatedAt') || key.endsWith('_updatedAt')) continue;
+    await setContentValue(key, value);
+  }
+}
+
+async function withContentWrite(fn) {
+  // No queue needed with PostgreSQL - just execute
+  await fn();
+}
+
+async function withStoreWrite(fn) {
+  await fn();
+}
+
+async function readStore() {
+  // For backward compatibility - not used with PostgreSQL directly
+  return { refreshTokens: {} };
+}
+
+async function writeStore(_next) {
+  // No-op - individual token operations handle this
+}
+
+async function revokeAllRefreshTokensForUser(userId) {
+  await revokeAllUserTokens(userId, nowMs());
 }
 
 function defaultTGCSData() {
   return {
     hero: {
       title: 'SuperCorridor TGCS',
-      subtitle: 'Trans Gunung Cyber Subsea Cable System',
+      subtitle: 'Trans Global Cable System',
       description:
         "A state-of-the-art submarine cable system connecting strategic locations across Indonesia with world-class reliability and capacity.",
       enabled: true,
@@ -437,6 +345,36 @@ function defaultCareersJobs() {
       active: true,
     },
   ];
+}
+
+function defaultCustomersData() {
+  return {
+    customers: [
+      { id: '1', name: 'PT Bank Central Asia', logo: 'https://via.placeholder.com/150x80?text=BCA', industry: 'Banking' },
+      { id: '2', name: 'PT Telkom Indonesia', logo: 'https://via.placeholder.com/150x80?text=Telkom', industry: 'Telecommunications' },
+      { id: '3', name: 'PT Astra International', logo: 'https://via.placeholder.com/150x80?text=Astra', industry: 'Automotive' },
+    ],
+    testimonials: [
+      {
+        id: '1',
+        customerName: 'John Smith',
+        position: 'CTO',
+        company: 'Tech Corp Indonesia',
+        content: 'SuperCorridor has been instrumental in our digital transformation. Their reliable network and excellent support have exceeded our expectations.',
+        rating: 5,
+        avatar: 'https://i.pravatar.cc/150?img=1',
+      },
+      {
+        id: '2',
+        customerName: 'Sarah Johnson',
+        position: 'IT Director',
+        company: 'Global Finance Ltd',
+        content: 'The 99.99% uptime guarantee is not just a promise - they deliver. Our operations have never been smoother.',
+        rating: 5,
+        avatar: 'https://i.pravatar.cc/150?img=2',
+      },
+    ],
+  };
 }
 
 function defaultCareersApplications() {
@@ -1149,17 +1087,13 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     const refreshToken = signRefreshToken(user, refreshJti);
     const refreshTokenHash = sha256Base64Url(refreshToken);
 
-    await withStoreWrite(async () => {
-      const store = await readStore();
-      store.refreshTokens[refreshJti] = {
-        userId: user.id,
-        tokenHash: refreshTokenHash,
-        createdAt: nowMs(),
-        expiresAt: nowMs() + REFRESH_TOKEN_TTL_SECONDS * 1000,
-        revokedAt: null,
-        replacedByJti: null,
-      };
-      await writeStore(store);
+    await insertRefreshToken(refreshJti, {
+      userId: user.id,
+      tokenHash: refreshTokenHash,
+      createdAt: nowMs(),
+      expiresAt: nowMs() + REFRESH_TOKEN_TTL_SECONDS * 1000,
+      revokedAt: null,
+      replacedByJti: null,
     });
 
     setAuthCookies(res, accessToken, refreshToken);
@@ -1180,14 +1114,10 @@ app.post('/api/auth/logout', async (req, res) => {
       if (payload && typeof payload === 'object' && payload.jti) {
         const jti = String(payload.jti);
         const tokenHash = sha256Base64Url(token);
-        await withStoreWrite(async () => {
-          const store = await readStore();
-          const entry = store.refreshTokens[jti];
-          if (entry && entry.tokenHash === tokenHash && !entry.revokedAt) {
-            store.refreshTokens[jti] = { ...entry, revokedAt: nowMs() };
-            await writeStore(store);
-          }
-        });
+        const entry = await getRefreshToken(jti);
+        if (entry && entry.tokenHash === tokenHash && !entry.revokedAt) {
+          await revokeRefreshToken(jti, nowMs(), null);
+        }
       }
     }
   } catch (err) {
@@ -1210,8 +1140,7 @@ app.post('/api/auth/refresh', refreshLimiter, async (req, res) => {
     const userId = String(payload.sub ?? '1');
     const tokenHash = sha256Base64Url(token);
 
-    const store = await readStore();
-    const entry = store.refreshTokens[jti];
+    const entry = await getRefreshToken(jti);
     if (!entry || entry.userId !== userId || entry.tokenHash !== tokenHash) {
       return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
     }
@@ -1223,14 +1152,7 @@ app.post('/api/auth/refresh', refreshLimiter, async (req, res) => {
       return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
     }
     if (typeof entry.expiresAt === 'number' && nowMs() >= entry.expiresAt) {
-      await withStoreWrite(async () => {
-        const nextStore = await readStore();
-        const nextEntry = nextStore.refreshTokens[jti];
-        if (nextEntry && !nextEntry.revokedAt) {
-          nextStore.refreshTokens[jti] = { ...nextEntry, revokedAt: nowMs() };
-          await writeStore(nextStore);
-        }
-      });
+      await revokeRefreshToken(jti, nowMs(), null);
       clearAuthCookies(res);
       clearCsrfCookie(res);
       return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
@@ -1249,20 +1171,14 @@ app.post('/api/auth/refresh', refreshLimiter, async (req, res) => {
     const nextRefreshToken = signRefreshToken(user, nextJti);
     const nextRefreshHash = sha256Base64Url(nextRefreshToken);
 
-    await withStoreWrite(async () => {
-      const nextStore = await readStore();
-      const current = nextStore.refreshTokens[jti];
-      if (!current || current.revokedAt) return;
-      nextStore.refreshTokens[jti] = { ...current, revokedAt: nowMs(), replacedByJti: nextJti };
-      nextStore.refreshTokens[nextJti] = {
-        userId,
-        tokenHash: nextRefreshHash,
-        createdAt: nowMs(),
-        expiresAt: nowMs() + REFRESH_TOKEN_TTL_SECONDS * 1000,
-        revokedAt: null,
-        replacedByJti: null,
-      };
-      await writeStore(nextStore);
+    await revokeRefreshToken(jti, nowMs(), nextJti);
+    await insertRefreshToken(nextJti, {
+      userId,
+      tokenHash: nextRefreshHash,
+      createdAt: nowMs(),
+      expiresAt: nowMs() + REFRESH_TOKEN_TTL_SECONDS * 1000,
+      revokedAt: null,
+      replacedByJti: null,
     });
 
     res.cookie('access_token', accessToken, cookieOptions(ACCESS_TOKEN_TTL_SECONDS * 1000));
@@ -1334,6 +1250,18 @@ app.get('/api/content/careers/jobs', async (_req, res) => {
   const jobs = (store.careersJobs ?? defaultCareersJobs()).filter((j) => j.active);
   jobs.sort((a, b) => String(b.posted).localeCompare(String(a.posted)));
   res.json({ ok: true, jobs });
+});
+
+app.get('/api/content/network-coverage', async (_req, res) => {
+  const store = await readContentStore();
+  const networkCoverage = store.networkCoverage ?? defaultNetworkCoverage();
+  res.json({ ok: true, networkCoverage });
+});
+
+app.get('/api/content/customers', async (_req, res) => {
+  const store = await readContentStore();
+  const customers = store.customers ?? defaultCustomersData();
+  res.json({ ok: true, customers });
 });
 
 app.post('/api/careers/apply', resumeUploadMiddleware, async (req, res) => {
@@ -1548,11 +1476,407 @@ app.put('/api/admin/content/careers/applications', requireAuth, requireHrAdmin, 
   res.json({ ok: true });
 });
 
+// --- Admin Customers ---
+app.get('/api/admin/content/customers', requireAuth, requireContentAdmin, async (_req, res) => {
+  const store = await readContentStore();
+  const customers = store.customers ?? defaultCustomersData();
+  res.json({ ok: true, customers });
+});
+
+app.put('/api/admin/content/customers', requireAuth, requireContentAdmin, async (req, res) => {
+  const input = req.body?.customers;
+  if (!input || typeof input !== 'object') return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+
+  // Validate customers array
+  const customersList = input.customers;
+  const testimonialsList = input.testimonials;
+  if (!Array.isArray(customersList) || !Array.isArray(testimonialsList)) {
+    return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+  }
+  if (customersList.length > 200 || testimonialsList.length > 200) {
+    return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+  }
+
+  for (const c of customersList) {
+    if (!c || typeof c !== 'object') return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+    if (typeof c.id !== 'string' || typeof c.name !== 'string' || typeof c.logo !== 'string' || typeof c.industry !== 'string') {
+      return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+    }
+  }
+
+  for (const t of testimonialsList) {
+    if (!t || typeof t !== 'object') return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+    if (typeof t.id !== 'string' || typeof t.customerName !== 'string' || typeof t.position !== 'string' ||
+        typeof t.company !== 'string' || typeof t.content !== 'string' || typeof t.rating !== 'number' ||
+        typeof t.avatar !== 'string') {
+      return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+    }
+  }
+
+  await withContentWrite(async () => {
+    const store = await readContentStore();
+    await writeContentStore({
+      ...store,
+      customers: { customers: customersList, testimonials: testimonialsList },
+      customersUpdatedAt: nowMs(),
+    });
+  });
+
+  res.json({ ok: true });
+});
+
 app.get('/api/admin/ping', requireAuth, requireAdminAny, (_req, res) => {
   res.json({ ok: true });
 });
 
-app.listen(PORT, () => {
-  assertProductionConfig();
-  console.log(`API listening on http://localhost:${PORT}`);
+// --- Contact Messages ---
+function defaultContactMessages() {
+  return [
+    {
+      id: '1',
+      name: 'John Doe',
+      email: 'john.doe@telkom.co.id',
+      phone: '+62 812-3456-7890',
+      company: 'PT. Telkom Indonesia',
+      subject: 'Inquiry about Dedicated Connectivity',
+      message: 'We are interested in your 10 Gbps dedicated fiber service for our Jakarta office. Please send us a quotation.',
+      date: '2026-01-02 10:30',
+      status: 'new',
+    },
+    {
+      id: '2',
+      name: 'Jane Smith',
+      email: 'jane.smith@bca.co.id',
+      phone: '+62 813-9876-5432',
+      company: 'Bank Central Asia',
+      subject: 'SD-WAN Solution for Multi-Branch',
+      message: 'We need SD-WAN solution to connect 50+ branches across Indonesia. Can we schedule a meeting?',
+      date: '2026-01-02 09:15',
+      status: 'read',
+    },
+    {
+      id: '3',
+      name: 'Ahmad Rahman',
+      email: 'ahmad.rahman@pertamina.com',
+      phone: '+62 821-5555-6666',
+      company: 'PT. Pertamina',
+      subject: 'Cloud Interconnection Services',
+      message: 'Looking for direct connection to AWS and Azure for our enterprise applications.',
+      date: '2026-01-01 16:45',
+      status: 'responded',
+    },
+  ];
+}
+
+function validateContactMessages(input) {
+  if (!Array.isArray(input)) return null;
+  if (input.length > 10000) return null;
+  const allowedStatus = new Set(['new', 'read', 'responded']);
+  const next = [];
+  for (const item of input) {
+    if (!item || typeof item !== 'object') return null;
+    const id = typeof item.id === 'string' ? item.id : null;
+    const name = typeof item.name === 'string' ? item.name : null;
+    const email = typeof item.email === 'string' ? item.email : null;
+    const phone = typeof item.phone === 'string' ? item.phone : '';
+    const company = typeof item.company === 'string' ? item.company : '';
+    const subject = typeof item.subject === 'string' ? item.subject : '';
+    const message = typeof item.message === 'string' ? item.message : '';
+    const date = typeof item.date === 'string' ? item.date : '';
+    const status = typeof item.status === 'string' ? item.status : 'new';
+    if (!id || !name || !email) return null;
+    if (!allowedStatus.has(status)) return null;
+    next.push({ id, name, email, phone, company, subject, message, date, status });
+  }
+  return next;
+}
+
+app.get('/api/admin/content/contact-messages', requireAuth, requireContentAdmin, async (_req, res) => {
+  const store = await readContentStore();
+  const messages = store.contactMessages ?? defaultContactMessages();
+  res.json({ ok: true, messages });
+});
+
+app.put('/api/admin/content/contact-messages', requireAuth, requireContentAdmin, async (req, res) => {
+  const messages = validateContactMessages(req.body?.messages);
+  if (!messages) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+
+  await withContentWrite(async () => {
+    const store = await readContentStore();
+    await writeContentStore({ ...store, contactMessages: messages, contactMessagesUpdatedAt: nowMs() });
+  });
+
+  res.json({ ok: true });
+});
+
+// Public contact form submission
+app.post('/api/contact', async (req, res) => {
+  const { name, email, phone, company, subject, message } = req.body ?? {};
+  if (!name || !email || !subject || !message) {
+    return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+  }
+  if (typeof name !== 'string' || typeof email !== 'string' || typeof subject !== 'string' || typeof message !== 'string') {
+    return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+  }
+  if (name.length > 200 || email.length > 320 || subject.length > 500 || message.length > 10000) {
+    return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+  }
+
+  const newMessage = {
+    id: crypto.randomBytes(12).toString('base64url'),
+    name: name.trim(),
+    email: email.trim(),
+    phone: typeof phone === 'string' ? phone.trim() : '',
+    company: typeof company === 'string' ? company.trim() : '',
+    subject: subject.trim(),
+    message: message.trim(),
+    date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+    status: 'new',
+  };
+
+  await withContentWrite(async () => {
+    const store = await readContentStore();
+    const existing = store.contactMessages ?? defaultContactMessages();
+    const next = [newMessage, ...existing].slice(0, 10000);
+    await writeContentStore({ ...store, contactMessages: next, contactMessagesUpdatedAt: nowMs() });
+  });
+
+  res.json({ ok: true, id: newMessage.id });
+});
+
+// --- Network Coverage ---
+function defaultNetworkCoverage() {
+  return {
+    title: 'Network Coverage',
+    description: 'SuperCorridor network spans across major cities in Indonesia',
+    totalPops: 150,
+    totalCities: 50,
+    cities: [
+      { id: '1', name: 'Jakarta', province: 'DKI Jakarta', pops: 25, status: 'active' },
+      { id: '2', name: 'Surabaya', province: 'Jawa Timur', pops: 15, status: 'active' },
+      { id: '3', name: 'Bandung', province: 'Jawa Barat', pops: 12, status: 'active' },
+      { id: '4', name: 'Medan', province: 'Sumatera Utara', pops: 10, status: 'active' },
+      { id: '5', name: 'Semarang', province: 'Jawa Tengah', pops: 8, status: 'active' },
+    ],
+  };
+}
+
+function validateNetworkCoverage(input) {
+  if (!input || typeof input !== 'object') return null;
+  const title = typeof input.title === 'string' ? input.title : null;
+  const description = typeof input.description === 'string' ? input.description : null;
+  const totalPops = typeof input.totalPops === 'number' ? input.totalPops : null;
+  const totalCities = typeof input.totalCities === 'number' ? input.totalCities : null;
+  if (!title || !description || totalPops === null || totalCities === null) return null;
+
+  const cities = [];
+  if (Array.isArray(input.cities)) {
+    for (const c of input.cities) {
+      if (!c || typeof c !== 'object') return null;
+      const id = typeof c.id === 'string' ? c.id : null;
+      const name = typeof c.name === 'string' ? c.name : null;
+      const province = typeof c.province === 'string' ? c.province : null;
+      const pops = typeof c.pops === 'number' ? c.pops : null;
+      const status = typeof c.status === 'string' ? c.status : null;
+      if (!id || !name || !province || pops === null || !status) return null;
+      if (status !== 'active' && status !== 'coming-soon') return null;
+      cities.push({ id, name, province, pops, status });
+    }
+  }
+
+  return { title, description, totalPops, totalCities, cities };
+}
+
+app.get('/api/admin/content/network-coverage', requireAuth, requireContentAdmin, async (_req, res) => {
+  const store = await readContentStore();
+  const networkCoverage = store.networkCoverage ?? defaultNetworkCoverage();
+  res.json({ ok: true, networkCoverage });
+});
+
+app.put('/api/admin/content/network-coverage', requireAuth, requireContentAdmin, async (req, res) => {
+  const networkCoverage = validateNetworkCoverage(req.body?.networkCoverage);
+  if (!networkCoverage) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+
+  await withContentWrite(async () => {
+    const store = await readContentStore();
+    await writeContentStore({ ...store, networkCoverage, networkCoverageUpdatedAt: nowMs() });
+  });
+
+  res.json({ ok: true });
+});
+
+// --- Settings ---
+function validateSettings(input) {
+  if (!input || typeof input !== 'object') return null;
+  const result = {};
+
+  if (input.profile && typeof input.profile === 'object') {
+    result.profile = {
+      name: typeof input.profile.name === 'string' ? input.profile.name : 'Admin User',
+      email: typeof input.profile.email === 'string' ? input.profile.email : '',
+      phone: typeof input.profile.phone === 'string' ? input.profile.phone : '',
+    };
+  }
+
+  if (input.notifications && typeof input.notifications === 'object') {
+    result.notifications = {
+      contactMessages: typeof input.notifications.contactMessages === 'boolean' ? input.notifications.contactMessages : true,
+      jobApplications: typeof input.notifications.jobApplications === 'boolean' ? input.notifications.jobApplications : true,
+      weeklySummary: typeof input.notifications.weeklySummary === 'boolean' ? input.notifications.weeklySummary : false,
+      systemUpdates: typeof input.notifications.systemUpdates === 'boolean' ? input.notifications.systemUpdates : true,
+    };
+  }
+
+  if (input.website && typeof input.website === 'object') {
+    result.website = {
+      name: typeof input.website.name === 'string' ? input.website.name : 'SuperCorridor',
+      phone: typeof input.website.phone === 'string' ? input.website.phone : '',
+      email: typeof input.website.email === 'string' ? input.website.email : '',
+      address: typeof input.website.address === 'string' ? input.website.address : '',
+    };
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+app.get('/api/admin/content/settings', requireAuth, requireAdminAny, async (_req, res) => {
+  const store = await readContentStore();
+  const settings = store.settings ?? null;
+  res.json({ ok: true, settings });
+});
+
+app.put('/api/admin/content/settings', requireAuth, requireAdminAny, async (req, res) => {
+  const settings = validateSettings(req.body?.settings);
+  if (!settings) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+
+  await withContentWrite(async () => {
+    const store = await readContentStore();
+    const existing = store.settings ?? {};
+    await writeContentStore({ ...store, settings: { ...existing, ...settings }, settingsUpdatedAt: nowMs() });
+  });
+
+  res.json({ ok: true });
+});
+
+// --- Change Password ---
+app.post('/api/admin/change-password', requireAuth, requireAdminAny, async (req, res) => {
+  try {
+    const currentPassword = String(req.body?.currentPassword ?? '');
+    const newPassword = String(req.body?.newPassword ?? '');
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ ok: false, error: 'PASSWORD_TOO_SHORT' });
+    }
+
+    // Verify current password
+    const accounts = [
+      { id: '1', email: SUPER_ADMIN_EMAIL, passwordHash: SUPER_ADMIN_PASSWORD_HASH, passwordPlain: SUPER_ADMIN_PASSWORD, devFallbackPassword: 'admin123' },
+      { id: '2', email: CONTENT_EMAIL, passwordHash: CONTENT_PASSWORD_HASH, passwordPlain: CONTENT_PASSWORD, devFallbackPassword: 'content123' },
+      { id: '3', email: HR_EMAIL, passwordHash: HR_PASSWORD_HASH, passwordPlain: HR_PASSWORD, devFallbackPassword: 'hr123' },
+    ];
+
+    const account = accounts.find((a) => a.id === req.auth.userId);
+    if (!account) return res.status(400).json({ ok: false, error: 'INVALID_PASSWORD' });
+
+    const passwordOk = account.passwordHash
+      ? await bcrypt.compare(currentPassword, account.passwordHash)
+      : account.passwordPlain
+        ? currentPassword === account.passwordPlain
+        : currentPassword === account.devFallbackPassword;
+
+    if (!passwordOk) {
+      return res.status(400).json({ ok: false, error: 'INVALID_PASSWORD' });
+    }
+
+    // Note: In a real production system, you'd update the password hash in a database.
+    // Since this uses env vars for auth, we store the new hash in the content store for dev purposes.
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await withContentWrite(async () => {
+      const store = await readContentStore();
+      const passwordOverrides = store.passwordOverrides ?? {};
+      passwordOverrides[req.auth.userId] = newHash;
+      await writeContentStore({ ...store, passwordOverrides, passwordOverridesUpdatedAt: nowMs() });
+    });
+
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ ok: false, error: 'INTERNAL' });
+  }
+});
+
+// --- Dashboard Stats ---
+app.get('/api/admin/dashboard-stats', requireAuth, requireAdminAny, async (_req, res) => {
+  const store = await readContentStore();
+  const contactMessages = store.contactMessages ?? defaultContactMessages();
+  const applications = store.careersApplications ?? defaultCareersApplications();
+
+  const stats = {
+    totalMessages: contactMessages.length,
+    newMessages: contactMessages.filter((m) => m.status === 'new').length,
+    totalApplications: applications.length,
+    newApplications: applications.filter((a) => a.status === 'new').length,
+  };
+
+  res.json({ ok: true, stats });
+});
+
+// --- Generic Page Content ---
+// A flexible endpoint for storing/retrieving page content by key.
+// Used by Solutions, About, and other pages that need simple content management.
+const ALLOWED_PAGE_KEYS = new Set([
+  'solutions-dedicated-connectivity',
+  'solutions-backbone-network',
+  'solutions-cloud-interconnection',
+  'solutions-value-added-services',
+  'about-company-overview',
+  'about-vision-mission',
+  'about-leadership',
+  'about-milestones',
+]);
+
+app.get('/api/admin/content/pages/:key', requireAuth, requireContentAdmin, async (req, res) => {
+  const key = req.params.key;
+  if (!ALLOWED_PAGE_KEYS.has(key)) {
+    return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
+  }
+  const data = await getPageContent(key);
+  res.json({ ok: true, data });
+});
+
+app.put('/api/admin/content/pages/:key', requireAuth, requireContentAdmin, async (req, res) => {
+  const key = req.params.key;
+  if (!ALLOWED_PAGE_KEYS.has(key)) {
+    return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
+  }
+  const data = req.body?.data;
+  if (!data || typeof data !== 'object') {
+    return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+  }
+
+  await setPageContent(key, data);
+  res.json({ ok: true });
+});
+
+// Public page content endpoint
+app.get('/api/content/pages/:key', async (req, res) => {
+  const key = req.params.key;
+  if (!ALLOWED_PAGE_KEYS.has(key)) {
+    return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
+  }
+  const data = await getPageContent(key);
+  res.json({ ok: true, data });
+});
+
+// Initialize database and start server
+initDatabase().then(() => {
+  app.listen(PORT, () => {
+    assertProductionConfig();
+    console.log(`API listening on http://localhost:${PORT}`);
+  });
+}).catch((err) => {
+  console.error('Failed to initialize database:', err.message);
+  process.exit(1);
 });

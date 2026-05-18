@@ -56,11 +56,14 @@ import { AdminCustomers } from './pages/admin/Customers';
 // Admin Solutions
 import { AdminSolutionsDedicatedConnectivity } from './pages/admin/solutions/DedicatedConnectivity';
 import { AdminSolutionsBackboneNetwork } from './pages/admin/solutions/BackboneNetwork';
+import { AdminSolutionsCloudInterconnection } from './pages/admin/solutions/CloudInterconnection';
+import { AdminSolutionsValueAddedServices } from './pages/admin/solutions/ValueAddedServices';
 
 // Admin About
 import { AdminAboutCompanyOverview } from './pages/admin/about/CompanyOverview';
 import { AdminAboutVisionMission } from './pages/admin/about/VisionMission';
 import { AdminAboutLeadership } from './pages/admin/about/Leadership';
+import { AdminAboutMilestones } from './pages/admin/about/Milestones';
 
 // Admin Network
 import { AdminNetworkCoverage } from './pages/admin/NetworkCoverage';
@@ -68,7 +71,8 @@ import { AdminNetworkCoverage } from './pages/admin/NetworkCoverage';
 // Admin TGCS
 import { AdminTGCSManagement } from './pages/admin/TGCSManagement';
 
-import { AdminPlaceholder } from './pages/admin/AdminPlaceholder';
+// 404 Page
+import { NotFound } from './pages/NotFound';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -290,10 +294,7 @@ export default function App() {
                       path="solutions/cloud-interconnection"
                       element={
                         <RequireAdminRole allowed={['super_admin', 'content']}>
-                          <AdminPlaceholder
-                            title="Cloud Interconnection Management"
-                            description="Content management coming soon. Use similar structure as Dedicated Connectivity"
-                          />
+                          <AdminSolutionsCloudInterconnection />
                         </RequireAdminRole>
                       }
                     />
@@ -301,10 +302,7 @@ export default function App() {
                       path="solutions/value-added-services"
                       element={
                         <RequireAdminRole allowed={['super_admin', 'content']}>
-                          <AdminPlaceholder
-                            title="Value-Added Services Management"
-                            description="Content management coming soon. Use similar structure as Dedicated Connectivity"
-                          />
+                          <AdminSolutionsValueAddedServices />
                         </RequireAdminRole>
                       }
                     />
@@ -338,10 +336,7 @@ export default function App() {
                       path="about/milestones"
                       element={
                         <RequireAdminRole allowed={['super_admin', 'content']}>
-                          <AdminPlaceholder
-                            title="Milestones Management"
-                            description="Timeline and achievements management coming soon"
-                          />
+                          <AdminAboutMilestones />
                         </RequireAdminRole>
                       }
                     />
@@ -395,6 +390,7 @@ export default function App() {
                       <Route path="/careers" element={<Careers />} />
                       <Route path="/contact" element={<Contact />} />
                       <Route path="/tgcs-project" element={<TGCSProject />} />
+                      <Route path="*" element={<NotFound />} />
                     </Routes>
                   </main>
                   <ContactBar />
