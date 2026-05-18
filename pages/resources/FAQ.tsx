@@ -110,7 +110,11 @@ export function FAQ() {
         }));
 
         if (!cancelled && nextSections.length > 0) {
-          setFaqSections(nextSections);
+          // Only replace if we have more categories than the minimal server defaults
+          const totalQuestions = nextSections.reduce((sum: number, s: { questions: unknown[] }) => sum + s.questions.length, 0);
+          if (totalQuestions > 3) {
+            setFaqSections(nextSections);
+          }
         }
       } catch (err) {
         void err;
@@ -175,8 +179,9 @@ export function FAQ() {
                       }`}
                     >
                       <button
-                        className="w-full text-left p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                        className="w-full text-left p-6 flex items-center justify-between hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-inset"
                         onClick={() => toggleQuestion(section.category, faqIndex)}
+                        aria-expanded={isOpen}
                       >
                         <span className="pr-8">{faq.q}</span>
                         <ChevronDown

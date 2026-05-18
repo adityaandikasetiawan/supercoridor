@@ -67,10 +67,15 @@ export function DedicatedConnectivity() {
             <h2 className="text-3xl mb-8 text-center">Perfect For</h2>
             <div className="grid md:grid-cols-3 gap-8">
               {content.useCases.map((useCase, index) => {
-                const color = ['orange', 'blue', 'green'][index % 3];
+                const colors = [
+                  { bg: 'bg-orange-50', text: 'text-orange-600' },
+                  { bg: 'bg-blue-50', text: 'text-blue-600' },
+                  { bg: 'bg-green-50', text: 'text-green-600' },
+                ];
+                const c = colors[index % 3];
                 return (
-                  <div key={index} className={`bg-${color === 'orange' ? 'orange' : color === 'blue' ? 'blue' : 'green'}-50 p-6 rounded-lg`}>
-                    <h3 className={`text-xl mb-3 text-${color === 'orange' ? 'orange' : color === 'blue' ? 'blue' : 'green'}-600`}>{useCase.title}</h3>
+                  <div key={index} className={`${c.bg} p-6 rounded-lg`}>
+                    <h3 className={`text-xl mb-3 ${c.text}`}>{useCase.title}</h3>
                     <p className="text-gray-700">{useCase.description}</p>
                   </div>
                 );

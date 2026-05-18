@@ -31,7 +31,9 @@ import { Milestones } from './pages/about/Milestones';
 
 // Resources Pages
 import { Insights } from './pages/resources/Insights';
+import { ArticleDetail } from './pages/resources/ArticleDetail';
 import { CaseStudies } from './pages/resources/CaseStudies';
+import { CaseStudyDetail } from './pages/resources/CaseStudyDetail';
 import { FAQ } from './pages/resources/FAQ';
 
 // Admin Pages
@@ -40,6 +42,7 @@ import { Dashboard } from './pages/admin/Dashboard';
 import { AdminHomeManagement } from './pages/admin/HomeManagement';
 import { ManageContact } from './pages/admin/ManageContact';
 import { Settings } from './pages/admin/Settings';
+import { UserManagement } from './pages/admin/UserManagement';
 
 // Admin Resources
 import { AdminResourcesInsights } from './pages/admin/ResourcesInsights';
@@ -54,10 +57,8 @@ import { AdminCareersApplications } from './pages/admin/CareersApplications';
 import { AdminCustomers } from './pages/admin/Customers';
 
 // Admin Solutions
-import { AdminSolutionsDedicatedConnectivity } from './pages/admin/solutions/DedicatedConnectivity';
-import { AdminSolutionsBackboneNetwork } from './pages/admin/solutions/BackboneNetwork';
-import { AdminSolutionsCloudInterconnection } from './pages/admin/solutions/CloudInterconnection';
-import { AdminSolutionsValueAddedServices } from './pages/admin/solutions/ValueAddedServices';
+import { AdminSolutions } from './pages/admin/Solutions';
+import { AdminTechnology } from './pages/admin/Technology';
 
 // Admin About
 import { AdminAboutCompanyOverview } from './pages/admin/about/CompanyOverview';
@@ -218,6 +219,14 @@ export default function App() {
                       }
                     />
                     <Route path="settings" element={<Settings />} />
+                    <Route
+                      path="users"
+                      element={
+                        <RequireAdminRole allowed={['super_admin']}>
+                          <UserManagement />
+                        </RequireAdminRole>
+                      }
+                    />
                     
                     {/* Resources Routes */}
                     <Route
@@ -275,34 +284,18 @@ export default function App() {
                     
                     {/* Solutions Routes */}
                     <Route
-                      path="solutions/dedicated-connectivity"
+                      path="solutions"
                       element={
                         <RequireAdminRole allowed={['super_admin', 'content']}>
-                          <AdminSolutionsDedicatedConnectivity />
+                          <AdminSolutions />
                         </RequireAdminRole>
                       }
                     />
                     <Route
-                      path="solutions/backbone-network"
+                      path="technology"
                       element={
                         <RequireAdminRole allowed={['super_admin', 'content']}>
-                          <AdminSolutionsBackboneNetwork />
-                        </RequireAdminRole>
-                      }
-                    />
-                    <Route
-                      path="solutions/cloud-interconnection"
-                      element={
-                        <RequireAdminRole allowed={['super_admin', 'content']}>
-                          <AdminSolutionsCloudInterconnection />
-                        </RequireAdminRole>
-                      }
-                    />
-                    <Route
-                      path="solutions/value-added-services"
-                      element={
-                        <RequireAdminRole allowed={['super_admin', 'content']}>
-                          <AdminSolutionsValueAddedServices />
+                          <AdminTechnology />
                         </RequireAdminRole>
                       }
                     />
@@ -384,7 +377,9 @@ export default function App() {
                       <Route path="/about/milestones" element={<Milestones />} />
                       <Route path="/network-coverage" element={<NetworkCoverage />} />
                       <Route path="/resources/insights" element={<Insights />} />
+                      <Route path="/resources/insights/:id" element={<ArticleDetail />} />
                       <Route path="/resources/case-studies" element={<CaseStudies />} />
+                      <Route path="/resources/case-studies/:id" element={<CaseStudyDetail />} />
                       <Route path="/resources/faq" element={<FAQ />} />
                       <Route path="/customers" element={<Customers />} />
                       <Route path="/careers" element={<Careers />} />

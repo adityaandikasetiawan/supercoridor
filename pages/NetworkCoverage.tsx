@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { MapPin, CheckCircle, Globe } from 'lucide-react';
 
 interface CoverageCity {
@@ -15,6 +16,9 @@ interface CoverageData {
   totalPops: number;
   totalCities: number;
   cities: CoverageCity[];
+  mapEmbedUrl?: string;
+  mapImage?: string;
+  mapApiKey?: string;
 }
 
 const defaultRegions = [
@@ -138,13 +142,32 @@ export function NetworkCoverage() {
             </div>
           </div>
 
-          {/* Coverage Map Placeholder */}
-          <div className="mb-16 bg-gray-100 rounded-lg p-12 text-center">
-            <Globe className="w-24 h-24 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-2xl mb-2 text-gray-700">Interactive Coverage Map</h3>
-            <p className="text-gray-600">
-              Our fiber-optic network spans across Indonesia's major business districts
-            </p>
+          {/* Coverage Map */}
+          <div className="mb-16">
+            {coverageData?.mapEmbedUrl ? (
+              <div className="rounded-lg overflow-hidden shadow-sm border border-gray-200">
+                <iframe
+                  src={coverageData.mapEmbedUrl}
+                  title="Network Coverage Map"
+                  className="w-full h-[400px]"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            ) : coverageData?.mapImage ? (
+              <div className="rounded-lg overflow-hidden">
+                <img src={coverageData.mapImage} alt="Network Coverage Map" className="w-full h-auto rounded-lg" />
+              </div>
+            ) : (
+              <div className="bg-gray-100 rounded-lg p-12 text-center">
+                <Globe className="w-24 h-24 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-2xl mb-2 text-gray-700">Interactive Coverage Map</h3>
+                <p className="text-gray-600">
+                  Our fiber-optic network spans across Indonesia's major business districts
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Regional Coverage */}
@@ -283,12 +306,12 @@ export function NetworkCoverage() {
           <p className="text-xl opacity-90 mb-6">
             Contact our sales team to learn more about our network availability and services in your location.
           </p>
-          <a
-            href="/contact"
+          <Link
+            to="/contact"
             className="inline-block bg-white text-green-600 px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors"
           >
             Contact Us
-          </a>
+          </Link>
         </div>
       </section>
     </div>

@@ -23,16 +23,16 @@ export function Footer() {
               Leading provider of enterprise-grade internet connectivity and network solutions.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors">
+              <a href="#" aria-label="Facebook" className="text-gray-400 hover:text-orange-500 transition-colors">
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-blue-500 transition-colors">
+              <a href="#" aria-label="Twitter" className="text-gray-400 hover:text-blue-500 transition-colors">
                 <Twitter className="w-5 h-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-blue-600 transition-colors">
+              <a href="#" aria-label="LinkedIn" className="text-gray-400 hover:text-blue-600 transition-colors">
                 <Linkedin className="w-5 h-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-orange-400 transition-colors">
+              <a href="#" aria-label="Instagram" className="text-gray-400 hover:text-orange-400 transition-colors">
                 <Instagram className="w-5 h-5" />
               </a>
             </div>

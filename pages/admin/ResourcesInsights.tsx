@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { apiFetch } from '../../utils/storage';
+import { ImageUpload } from '../../components/ImageUpload';
+import { RichTextEditor } from '../../components/RichTextEditor';
 
 interface Article {
   id: string;
@@ -253,13 +255,12 @@ export function AdminResourcesInsights() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-700 mb-1">Content</label>
-                    <textarea
+                    <RichTextEditor
                       value={formData.content}
-                      onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      rows={6}
-                      required
+                      onChange={(val) => setFormData({ ...formData, content: val })}
+                      label="Article Content"
+                      placeholder="Write your article content here..."
+                      height="400px"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -301,13 +302,10 @@ export function AdminResourcesInsights() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-700 mb-1">Image URL</label>
-                      <input
-                        type="url"
+                      <ImageUpload
                         value={formData.image}
-                        onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                        required
+                        onChange={(url) => setFormData({ ...formData, image: url })}
+                        label="Article Image"
                       />
                     </div>
                   </div>

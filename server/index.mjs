@@ -95,6 +95,37 @@ const resumeUpload = multer({
   },
 });
 
+const IMAGE_UPLOAD_DIR = path.join(UPLOADS_DIR, 'images');
+const imageUpload = multer({
+  storage: multer.diskStorage({
+    destination(_req, _file, cb) {
+      fs.mkdir(IMAGE_UPLOAD_DIR, { recursive: true })
+        .then(() => cb(null, IMAGE_UPLOAD_DIR))
+        .catch((err) => cb(err, IMAGE_UPLOAD_DIR));
+    },
+    filename(_req, file, cb) {
+      const ext = path.extname(file.originalname ?? '').toLowerCase();
+      const allowedExt = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']);
+      const safeExt = allowedExt.has(ext) ? ext : '.jpg';
+      const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${safeExt}`;
+      cb(null, filename);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter(_req, file, cb) {
+    const ext = path.extname(file.originalname ?? '').toLowerCase();
+    const allowedExt = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']);
+    const allowedMime = new Set([
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/svg+xml',
+    ]);
+    cb(null, allowedExt.has(ext) || allowedMime.has(file.mimetype));
+  },
+});
+
 function resumeUploadMiddleware(req, res, next) {
   resumeUpload.single('resume')(req, res, (err) => {
     if (!err) return next();
@@ -802,12 +833,11 @@ function validateHomeManagement(input) {
   if (!Array.isArray(stats)) return null;
   if (stats.length < 1 || stats.length > 12) return null;
 
-  const title = typeof heroData.title === 'string' ? heroData.title : null;
-  const subtitle = typeof heroData.subtitle === 'string' ? heroData.subtitle : null;
-  const ctaText = typeof heroData.ctaText === 'string' ? heroData.ctaText : null;
-  const ctaLink = typeof heroData.ctaLink === 'string' ? heroData.ctaLink : null;
-  const backgroundImage = typeof heroData.backgroundImage === 'string' ? heroData.backgroundImage : null;
-  if (!title || !subtitle || !ctaText || !ctaLink || !backgroundImage) return null;
+  const title = typeof heroData.title === 'string' ? heroData.title : '';
+  const subtitle = typeof heroData.subtitle === 'string' ? heroData.subtitle : '';
+  const ctaText = typeof heroData.ctaText === 'string' ? heroData.ctaText : '';
+  const ctaLink = typeof heroData.ctaLink === 'string' ? heroData.ctaLink : '';
+  const backgroundImage = typeof heroData.backgroundImage === 'string' ? heroData.backgroundImage : '';
 
   const nextStats = [];
   for (const s of stats) {
@@ -819,7 +849,21 @@ function validateHomeManagement(input) {
     nextStats.push({ label, value, suffix });
   }
 
-  return { heroData: { title, subtitle, ctaText, ctaLink, backgroundImage }, stats: nextStats };
+  // Features (optional)
+  let nextFeatures = null;
+  if (Array.isArray(input.features) && input.features.length > 0) {
+    nextFeatures = [];
+    for (const f of input.features) {
+      if (!f || typeof f !== 'object') continue;
+      const fTitle = typeof f.title === 'string' ? f.title : '';
+      const fDesc = typeof f.description === 'string' ? f.description : '';
+      if (fTitle) nextFeatures.push({ title: fTitle, description: fDesc });
+    }
+  }
+
+  const result = { heroData: { title, subtitle, ctaText, ctaLink, backgroundImage }, stats: nextStats };
+  if (nextFeatures && nextFeatures.length > 0) result.features = nextFeatures;
+  return result;
 }
 
 function signAccessToken(user) {
@@ -1212,55 +1256,52 @@ app.get('/api/auth/me', (req, res) => {
 });
 
 app.get('/api/content/tgcs', async (_req, res) => {
-  const store = await readContentStore();
-  const tgcs = store.tgcs ?? defaultTGCSData();
+  const tgcs = await getContentValue('tgcs') ?? defaultTGCSData();
   res.json({ ok: true, tgcs });
 });
 
 app.get('/api/content/hero-slides', async (_req, res) => {
-  const store = await readContentStore();
-  const heroSlides = store.heroSlides ?? defaultHeroSlides();
+  const heroSlides = await getContentValue('heroSlides') ?? defaultHeroSlides();
   res.json({ ok: true, heroSlides });
 });
 
+app.get('/api/content/home-management', async (_req, res) => {
+  const homeManagement = await getContentValue('homeManagement') ?? null;
+  res.json({ ok: true, homeManagement });
+});
+
 app.get('/api/content/resources/insights', async (_req, res) => {
-  const store = await readContentStore();
-  const articles = (store.resourcesInsights ?? defaultResourcesInsights()).filter((a) => a.published);
+  const articles = ((await getContentValue('resourcesInsights')) ?? defaultResourcesInsights()).filter((a) => a.published);
   articles.sort((a, b) => String(b.date).localeCompare(String(a.date)));
   res.json({ ok: true, articles });
 });
 
 app.get('/api/content/resources/case-studies', async (_req, res) => {
-  const store = await readContentStore();
-  const caseStudies = (store.resourcesCaseStudies ?? defaultResourcesCaseStudies()).filter(
+  const caseStudies = ((await getContentValue('resourcesCaseStudies')) ?? defaultResourcesCaseStudies()).filter(
     (cs) => cs.published
   );
   res.json({ ok: true, caseStudies });
 });
 
 app.get('/api/content/resources/faq', async (_req, res) => {
-  const store = await readContentStore();
-  const faqs = (store.resourcesFAQ ?? defaultResourcesFAQ()).filter((f) => f.published);
+  const faqs = ((await getContentValue('resourcesFAQ')) ?? defaultResourcesFAQ()).filter((f) => f.published);
   faqs.sort((a, b) => a.order - b.order);
   res.json({ ok: true, faqs });
 });
 
 app.get('/api/content/careers/jobs', async (_req, res) => {
-  const store = await readContentStore();
-  const jobs = (store.careersJobs ?? defaultCareersJobs()).filter((j) => j.active);
+  const jobs = ((await getContentValue('careersJobs')) ?? defaultCareersJobs()).filter((j) => j.active);
   jobs.sort((a, b) => String(b.posted).localeCompare(String(a.posted)));
   res.json({ ok: true, jobs });
 });
 
 app.get('/api/content/network-coverage', async (_req, res) => {
-  const store = await readContentStore();
-  const networkCoverage = store.networkCoverage ?? defaultNetworkCoverage();
+  const networkCoverage = (await getContentValue('networkCoverage')) ?? defaultNetworkCoverage();
   res.json({ ok: true, networkCoverage });
 });
 
 app.get('/api/content/customers', async (_req, res) => {
-  const store = await readContentStore();
-  const customers = store.customers ?? defaultCustomersData();
+  const customers = (await getContentValue('customers')) ?? defaultCustomersData();
   res.json({ ok: true, customers });
 });
 
@@ -1325,56 +1366,38 @@ app.post('/api/careers/apply', resumeUploadMiddleware, async (req, res) => {
 });
 
 app.get('/api/admin/content/tgcs', requireAuth, requireContentAdmin, async (_req, res) => {
-  const store = await readContentStore();
-  const tgcs = store.tgcs ?? defaultTGCSData();
+  const tgcs = (await getContentValue('tgcs')) ?? defaultTGCSData();
   res.json({ ok: true, tgcs });
 });
 
 app.put('/api/admin/content/tgcs', requireAuth, requireContentAdmin, async (req, res) => {
   const tgcs = validateTGCSData(req.body?.tgcs);
   if (!tgcs) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
-
-  await withContentWrite(async () => {
-    const store = await readContentStore();
-    await writeContentStore({ ...store, tgcs, tgcsUpdatedAt: nowMs() });
-  });
-
+  await setContentValue('tgcs', tgcs);
   res.json({ ok: true });
 });
 
 app.get('/api/admin/content/hero-slides', requireAuth, requireContentAdmin, async (_req, res) => {
-  const store = await readContentStore();
-  const heroSlides = store.heroSlides ?? defaultHeroSlides();
+  const heroSlides = (await getContentValue('heroSlides')) ?? defaultHeroSlides();
   res.json({ ok: true, heroSlides });
 });
 
 app.put('/api/admin/content/hero-slides', requireAuth, requireContentAdmin, async (req, res) => {
   const heroSlides = validateHeroSlides(req.body?.heroSlides);
   if (!heroSlides) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
-
-  await withContentWrite(async () => {
-    const store = await readContentStore();
-    await writeContentStore({ ...store, heroSlides, heroSlidesUpdatedAt: nowMs() });
-  });
-
+  await setContentValue('heroSlides', heroSlides);
   res.json({ ok: true });
 });
 
 app.get('/api/admin/content/home-management', requireAuth, requireContentAdmin, async (_req, res) => {
-  const store = await readContentStore();
-  const homeManagement = store.homeManagement ?? null;
+  const homeManagement = (await getContentValue('homeManagement')) ?? null;
   res.json({ ok: true, homeManagement });
 });
 
 app.put('/api/admin/content/home-management', requireAuth, requireContentAdmin, async (req, res) => {
   const homeManagement = validateHomeManagement(req.body?.homeManagement);
   if (!homeManagement) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
-
-  await withContentWrite(async () => {
-    const store = await readContentStore();
-    await writeContentStore({ ...store, homeManagement, homeManagementUpdatedAt: nowMs() });
-  });
-
+  await setContentValue('homeManagement', homeManagement);
   res.json({ ok: true });
 });
 
@@ -1476,6 +1499,44 @@ app.put('/api/admin/content/careers/applications', requireAuth, requireHrAdmin, 
   res.json({ ok: true });
 });
 
+// --- Send Status Email to Applicant ---
+app.post('/api/admin/careers/send-status-email', requireAuth, requireHrAdmin, async (req, res) => {
+  const { applicantName, email, jobTitle, status } = req.body ?? {};
+  if (!applicantName || !email || !jobTitle || !status) {
+    return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+  }
+
+  const statusMessages = {
+    new: 'We have received your application and it is currently under review.',
+    reviewed: 'Your application has been reviewed by our hiring team.',
+    shortlisted: 'Congratulations! You have been shortlisted for the next stage of our hiring process. We will contact you shortly to schedule an interview.',
+    rejected: 'Thank you for your interest. After careful consideration, we have decided to move forward with other candidates. We encourage you to apply for future openings.',
+  };
+
+  const message = statusMessages[status] ?? 'Your application status has been updated.';
+
+  // Store the email log (in production, integrate with email service like SendGrid/SES)
+  const emailLog = {
+    id: crypto.randomBytes(12).toString('base64url'),
+    to: email,
+    applicantName,
+    jobTitle,
+    status,
+    message,
+    sentAt: new Date().toISOString(),
+  };
+
+  // Save email log
+  const existingLogs = (await getContentValue('emailLogs')) ?? [];
+  await setContentValue('emailLogs', [emailLog, ...existingLogs].slice(0, 1000));
+
+  // In production: send actual email here via nodemailer/SendGrid/SES
+  // For now, just log it
+  console.log(`[EMAIL] To: ${email} | Subject: Application Status Update - ${jobTitle} | Status: ${status}`);
+
+  res.json({ ok: true, emailLog });
+});
+
 // --- Admin Customers ---
 app.get('/api/admin/content/customers', requireAuth, requireContentAdmin, async (_req, res) => {
   const store = await readContentStore();
@@ -1527,6 +1588,140 @@ app.put('/api/admin/content/customers', requireAuth, requireContentAdmin, async 
 
 app.get('/api/admin/ping', requireAuth, requireAdminAny, (_req, res) => {
   res.json({ ok: true });
+});
+
+// --- User Management (Super Admin only) ---
+const requireSuperAdmin = requireAnyRole(['super_admin']);
+
+app.get('/api/admin/users', requireAuth, requireSuperAdmin, async (_req, res) => {
+  const users = (await getContentValue('adminUsers')) ?? [
+    { id: '1', email: SUPER_ADMIN_EMAIL, name: 'Super Admin', role: 'super_admin', permissions: ['dashboard','home','tgcs','solutions','technology','about','network','resources','customers','contact','careers','settings','users'], active: true, createdAt: '2024-01-01' },
+    { id: '2', email: CONTENT_EMAIL, name: 'Content Admin', role: 'content', permissions: ['dashboard','home','tgcs','solutions','technology','about','network','resources','customers','contact','settings'], active: true, createdAt: '2024-01-01' },
+    { id: '3', email: HR_EMAIL, name: 'HR Admin', role: 'hr', permissions: ['dashboard','careers','settings'], active: true, createdAt: '2024-01-01' },
+  ];
+  // Strip passwordHash from response
+  const safeUsers = users.map(({ passwordHash, ...u }) => u);
+  res.json({ ok: true, users: safeUsers });
+});
+
+app.post('/api/admin/users/create', requireAuth, requireSuperAdmin, async (req, res) => {
+  const { email, name, role, password, active, permissions } = req.body ?? {};
+  if (!email || !name || !role || !password) {
+    return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+  }
+  if (!['super_admin', 'content', 'hr'].includes(role)) {
+    return res.status(400).json({ ok: false, error: 'INVALID_ROLE' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ ok: false, error: 'PASSWORD_TOO_SHORT' });
+  }
+
+  const users = (await getContentValue('adminUsers')) ?? [
+    { id: '1', email: SUPER_ADMIN_EMAIL, name: 'Super Admin', role: 'super_admin', permissions: ['dashboard','home','tgcs','solutions','technology','about','network','resources','customers','contact','careers','settings','users'], active: true, createdAt: '2024-01-01' },
+    { id: '2', email: CONTENT_EMAIL, name: 'Content Admin', role: 'content', permissions: ['dashboard','home','tgcs','solutions','technology','about','network','resources','customers','contact','settings'], active: true, createdAt: '2024-01-01' },
+    { id: '3', email: HR_EMAIL, name: 'HR Admin', role: 'hr', permissions: ['dashboard','careers','settings'], active: true, createdAt: '2024-01-01' },
+  ];
+
+  if (users.find((u) => u.email.toLowerCase() === email.toLowerCase())) {
+    return res.status(400).json({ ok: false, error: 'EMAIL_EXISTS' });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const userPermissions = Array.isArray(permissions) ? permissions.filter((p) => typeof p === 'string') : [];
+  const newUser = {
+    id: crypto.randomBytes(12).toString('base64url'),
+    email: email.trim().toLowerCase(),
+    name: name.trim(),
+    role,
+    permissions: userPermissions,
+    active: active !== false,
+    createdAt: new Date().toISOString().slice(0, 10),
+    passwordHash,
+  };
+
+  const updatedUsers = [...users, newUser];
+  await setContentValue('adminUsers', updatedUsers);
+
+  res.json({ ok: true, user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role, permissions: newUser.permissions, active: newUser.active, createdAt: newUser.createdAt } });
+});
+
+app.post('/api/admin/users/update', requireAuth, requireSuperAdmin, async (req, res) => {
+  const { id, email, name, role, password, active, permissions } = req.body ?? {};
+  if (!id || !email || !name || !role) {
+    return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+  }
+  if (!['super_admin', 'content', 'hr'].includes(role)) {
+    return res.status(400).json({ ok: false, error: 'INVALID_ROLE' });
+  }
+
+  const users = (await getContentValue('adminUsers')) ?? [
+    { id: '1', email: SUPER_ADMIN_EMAIL, name: 'Super Admin', role: 'super_admin', permissions: ['dashboard','home','tgcs','solutions','technology','about','network','resources','customers','contact','careers','settings','users'], active: true, createdAt: '2024-01-01' },
+    { id: '2', email: CONTENT_EMAIL, name: 'Content Admin', role: 'content', permissions: ['dashboard','home','tgcs','solutions','technology','about','network','resources','customers','contact','settings'], active: true, createdAt: '2024-01-01' },
+    { id: '3', email: HR_EMAIL, name: 'HR Admin', role: 'hr', permissions: ['dashboard','careers','settings'], active: true, createdAt: '2024-01-01' },
+  ];
+
+  const userIndex = users.findIndex((u) => u.id === id);
+  if (userIndex === -1) {
+    return res.status(404).json({ ok: false, error: 'USER_NOT_FOUND' });
+  }
+
+  const emailConflict = users.find((u) => u.id !== id && u.email.toLowerCase() === email.toLowerCase());
+  if (emailConflict) {
+    return res.status(400).json({ ok: false, error: 'EMAIL_EXISTS' });
+  }
+
+  const userPermissions = Array.isArray(permissions) ? permissions.filter((p) => typeof p === 'string') : (users[userIndex].permissions ?? []);
+  const updatedUser = {
+    ...users[userIndex],
+    email: email.trim().toLowerCase(),
+    name: name.trim(),
+    role,
+    permissions: userPermissions,
+    active: active !== false,
+  };
+
+  if (password && password.length >= 6) {
+    updatedUser.passwordHash = await bcrypt.hash(password, 10);
+  }
+
+  const updatedUsers = [...users];
+  updatedUsers[userIndex] = updatedUser;
+  await setContentValue('adminUsers', updatedUsers);
+
+  res.json({ ok: true, user: { id: updatedUser.id, email: updatedUser.email, name: updatedUser.name, role: updatedUser.role, permissions: updatedUser.permissions, active: updatedUser.active, createdAt: updatedUser.createdAt } });
+});
+
+app.post('/api/admin/users/delete', requireAuth, requireSuperAdmin, async (req, res) => {
+  const { id } = req.body ?? {};
+  if (!id) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
+
+  // Prevent deleting yourself
+  if (id === req.auth.userId) {
+    return res.status(400).json({ ok: false, error: 'CANNOT_DELETE_SELF' });
+  }
+
+  const users = (await getContentValue('adminUsers')) ?? [];
+  const updatedUsers = users.filter((u) => u.id !== id);
+  await setContentValue('adminUsers', updatedUsers);
+
+  res.json({ ok: true });
+});
+
+// --- Image Upload ---
+app.post('/api/admin/upload-image', requireAuth, requireAdminAny, (req, res) => {
+  imageUpload.single('image')(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ ok: false, error: 'FILE_TOO_LARGE', message: 'Max file size is 5MB' });
+      }
+      return res.status(400).json({ ok: false, error: 'UPLOAD_FAILED' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: 'NO_FILE' });
+    }
+    const url = `/uploads/images/${req.file.filename}`;
+    return res.json({ ok: true, url });
+  });
 });
 
 // --- Contact Messages ---
@@ -1827,6 +2022,9 @@ app.get('/api/admin/dashboard-stats', requireAuth, requireAdminAny, async (_req,
 // A flexible endpoint for storing/retrieving page content by key.
 // Used by Solutions, About, and other pages that need simple content management.
 const ALLOWED_PAGE_KEYS = new Set([
+  'solutions-all',
+  'technology-all',
+  'tgcs-extended',
   'solutions-dedicated-connectivity',
   'solutions-backbone-network',
   'solutions-cloud-interconnection',

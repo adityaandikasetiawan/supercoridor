@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
-import { Save, Plus } from 'lucide-react';
+import { Save, Plus, Map } from 'lucide-react';
 import { apiFetch } from '../../utils/storage';
+import { ImageUpload } from '../../components/ImageUpload';
 
 interface CoverageCity {
   id: string;
@@ -25,6 +26,9 @@ export function AdminNetworkCoverage() {
     description: 'SuperCorridor network spans across major cities in Indonesia',
     totalPops: 150,
     totalCities: 50,
+    mapEmbedUrl: '',
+    mapImage: '',
+    mapApiKey: '',
   });
 
   const [cities, setCities] = useState<CoverageCity[]>([
@@ -53,12 +57,15 @@ export function AdminNetworkCoverage() {
         if (response.ok) {
           const data = await response.json();
           if (data.networkCoverage) {
-            const nc = data.networkCoverage as CoverageData;
+            const nc = data.networkCoverage as CoverageData & { mapEmbedUrl?: string; mapImage?: string; mapApiKey?: string };
             setCoverageData({
               title: nc.title,
               description: nc.description,
               totalPops: nc.totalPops,
               totalCities: nc.totalCities,
+              mapEmbedUrl: nc.mapEmbedUrl ?? '',
+              mapImage: nc.mapImage ?? '',
+              mapApiKey: nc.mapApiKey ?? '',
             });
             if (nc.cities) setCities(nc.cities);
           }
@@ -195,6 +202,68 @@ export function AdminNetworkCoverage() {
               Save General Info
             </button>
           </form>
+        </div>
+
+        {/* Map Section */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-xl text-gray-900 mb-4 flex items-center gap-2">
+            <Map className="w-5 h-5 text-orange-600" /> Coverage Map
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Google Maps Embed URL</label>
+              <input
+                type="url"
+                value={coverageData.mapEmbedUrl}
+                onChange={(e) => setCoverageData({ ...coverageData, mapEmbedUrl: e.target.value })}
+                placeholder="https://www.google.com/maps/embed?pb=..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">Paste the embed URL from Google Maps (Share → Embed a map → copy src URL)</p>
+            </div>
+            {coverageData.mapEmbedUrl && (
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <iframe
+                  src={coverageData.mapEmbedUrl}
+                  title="Coverage Map Preview"
+                  className="w-full h-64"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            )}
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Google Maps API Key (for interactive map)</label>
+              <input
+                type="text"
+                value={coverageData.mapApiKey}
+                onChange={(e) => setCoverageData({ ...coverageData, mapApiKey: e.target.value })}
+                placeholder="AIzaSy..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">Optional: For interactive JavaScript map on the public page</p>
+            </div>
+            <div>
+              <ImageUpload
+                value={coverageData.mapImage}
+                onChange={(url) => setCoverageData({ ...coverageData, mapImage: url })}
+                label="Static Map Image (fallback)"
+                previewClassName="w-full h-48 object-cover rounded-lg"
+              />
+              <p className="text-xs text-gray-500 mt-1">Upload a static coverage map image as fallback when embed is not available</p>
+            </div>
+            <button
+              onClick={async () => {
+                const ok = await saveToServer(coverageData, cities);
+                if (ok) { setIsSaved(true); setTimeout(() => setIsSaved(false), 3000); }
+              }}
+              className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center"
+            >
+              <Save className="w-5 h-5 mr-2" />
+              Save Map Settings
+            </button>
+          </div>
         </div>
 
         {/* Cities List */}

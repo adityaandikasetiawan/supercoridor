@@ -12,6 +12,8 @@ import {
   Briefcase,
   Calendar,
   FileText,
+  FileDown,
+  Send,
 } from 'lucide-react';
 import { apiFetch } from '../../utils/storage';
 
@@ -159,6 +161,62 @@ export function AdminCareersApplications() {
     setIsDetailOpen(true);
   };
 
+  const handleExportCSV = () => {
+    const headers = ['Name', 'Email', 'Phone', 'Location', 'Job Title', 'Experience', 'Applied Date', 'Status', 'Education', 'Institution', 'Expected Salary'];
+    const rows = filteredApplications.map((app) => [
+      app.applicantName,
+      app.email,
+      app.phone,
+      app.location,
+      app.jobTitle,
+      app.experience,
+      app.appliedDate,
+      app.status,
+      app.educationLevel ?? '',
+      app.institution ?? '',
+      app.expectedSalary ?? '',
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `applications-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSuccess, setEmailSuccess] = useState('');
+
+  const handleSendStatusEmail = async (app: Application) => {
+    setEmailSending(true);
+    setEmailSuccess('');
+    try {
+      const res = await apiFetch('/api/admin/careers/send-status-email', {
+        method: 'POST',
+        body: JSON.stringify({
+          applicantName: app.applicantName,
+          email: app.email,
+          jobTitle: app.jobTitle,
+          status: app.status,
+        }),
+      });
+      if (res.ok) {
+        setEmailSuccess(`Email notification sent to ${app.email}`);
+        setTimeout(() => setEmailSuccess(''), 5000);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
   const filteredApplications = applications.filter((app) => {
     const matchesSearch =
       app.applicantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -195,10 +253,24 @@ export function AdminCareersApplications() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl text-gray-900">Job Applications</h1>
-          <p className="text-gray-600 mt-1">Manage candidate applications</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl text-gray-900">Job Applications</h1>
+            <p className="text-gray-600 mt-1">Manage candidate applications</p>
+          </div>
+          <button
+            onClick={handleExportCSV}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center text-sm"
+          >
+            <FileDown className="w-4 h-4 mr-2" /> Export CSV
+          </button>
         </div>
+
+        {emailSuccess && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded flex items-center gap-2">
+            <Send className="w-4 h-4" /> {emailSuccess}
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -562,6 +634,14 @@ export function AdminCareersApplications() {
                       <option value="shortlisted">Shortlisted</option>
                       <option value="rejected">Rejected</option>
                     </select>
+                    <button
+                      onClick={() => handleSendStatusEmail(selectedApplication)}
+                      disabled={emailSending}
+                      className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm"
+                    >
+                      <Send className="w-4 h-4" />
+                      {emailSending ? 'Sending...' : 'Send Status Notification Email'}
+                    </button>
                   </div>
 
                   {/* Actions */}

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, TrendingUp, Shield, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, TrendingUp, Shield, Zap, CheckCircle } from 'lucide-react';
 import { apiFetch } from '../../utils/storage';
 
 const fallbackCaseStudies = [
   {
+    id: '1',
     client: 'Global Financial Services Corp',
     industry: 'Financial Services',
     challenge: 'Required ultra-low latency connectivity for high-frequency trading operations across multiple locations.',
@@ -17,6 +19,7 @@ const fallbackCaseStudies = [
     color: 'orange',
   },
   {
+    id: '2',
     client: 'National Healthcare Network',
     industry: 'Healthcare',
     challenge: 'Needed secure, HIPAA-compliant connectivity to transfer large medical imaging files between hospitals.',
@@ -30,6 +33,7 @@ const fallbackCaseStudies = [
     color: 'blue',
   },
   {
+    id: '3',
     client: 'E-Commerce Leader',
     industry: 'Retail',
     challenge: 'Experienced network congestion during peak shopping seasons, affecting customer experience.',
@@ -65,14 +69,22 @@ export function CaseStudies() {
             const industry = typeof cs.industry === 'string' ? cs.industry : '';
             const challenge = typeof cs.challenge === 'string' ? cs.challenge : '';
             const solution = typeof cs.solution === 'string' ? cs.solution : '';
-            const resultsRaw = typeof cs.results === 'string' ? cs.results : '';
-            const results = resultsRaw
-              ? resultsRaw
-                  .split(',')
-                  .map((r: string) => r.trim())
-                  .filter(Boolean)
-              : [];
+            const resultsRaw = cs.results;
+            let results: string[] = [];
+            if (Array.isArray(resultsRaw)) {
+              results = resultsRaw.filter((r: unknown) => typeof r === 'string' && r.trim());
+            } else if (typeof resultsRaw === 'string' && resultsRaw) {
+              // Split by semicolon first (preferred), fallback to newline, then comma
+              if (resultsRaw.includes(';')) {
+                results = resultsRaw.split(';').map((r: string) => r.trim()).filter(Boolean);
+              } else if (resultsRaw.includes('\n')) {
+                results = resultsRaw.split('\n').map((r: string) => r.trim()).filter(Boolean);
+              } else {
+                results = resultsRaw.split(',').map((r: string) => r.trim()).filter(Boolean);
+              }
+            }
             return {
+              id: typeof cs.id === 'string' ? cs.id : String(index + 1),
               client,
               industry,
               challenge,
@@ -85,7 +97,11 @@ export function CaseStudies() {
           .filter((cs: any) => cs.client && cs.industry);
 
         if (!cancelled && next.length > 0) {
-          setCaseStudies(next);
+          // Only replace fallbacks if data is from admin (not server placeholder defaults)
+          const hasRealContent = next.some((cs: { challenge: string }) => cs.challenge && cs.challenge.length > 30);
+          if (hasRealContent || next.length > 1) {
+            setCaseStudies(next);
+          }
         }
       } catch (err) {
         void err;
@@ -113,99 +129,42 @@ export function CaseStudies() {
       {/* Case Studies */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="space-y-12">
+          <div className="space-y-8">
             {caseStudies.map((study, index) => (
-              <div
+              <Link
                 key={index}
-                className="bg-white border-2 border-gray-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
+                to={`/resources/case-studies/${study.id ?? index + 1}`}
+                className="group block bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300"
               >
-                <div
-                  className={`h-2 ${
-                    study.color === 'orange'
-                      ? 'bg-orange-500'
-                      : study.color === 'blue'
-                      ? 'bg-blue-600'
-                      : 'bg-green-600'
-                  }`}
-                ></div>
-                <div className="p-8">
-                  <div className="flex items-start mb-6">
-                    <div
-                      className={`inline-flex items-center justify-center w-16 h-16 rounded-full mr-6 flex-shrink-0 ${
-                        study.color === 'orange'
-                          ? 'bg-orange-100 text-orange-500'
-                          : study.color === 'blue'
-                          ? 'bg-blue-100 text-blue-600'
-                          : 'bg-green-100 text-green-600'
-                      }`}
-                    >
-                      <study.icon className="w-8 h-8" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl mb-2">{study.client}</h2>
-                      <div
-                        className={`inline-block px-3 py-1 rounded-full text-sm ${
-                          study.color === 'orange'
-                            ? 'bg-orange-100 text-orange-600'
-                            : study.color === 'blue'
-                            ? 'bg-blue-100 text-blue-600'
-                            : 'bg-green-100 text-green-600'
-                        }`}
-                      >
-                        {study.industry}
+                <div className="flex flex-col md:flex-row">
+                  {/* Image */}
+                  <div className="md:w-72 h-48 md:h-auto flex-shrink-0 relative overflow-hidden">
+                    <div className={`w-full h-full ${study.color === 'orange' ? 'bg-gradient-to-br from-orange-400 to-orange-600' : study.color === 'blue' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-green-400 to-green-600'}`}>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <study.icon className="w-16 h-16 text-white/30" />
                       </div>
                     </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-3 gap-8">
-                    <div>
-                      <h3 className="mb-3 text-gray-900">Challenge</h3>
-                      <p className="text-gray-600">{study.challenge}</p>
-                    </div>
-
-                    <div>
-                      <h3 className="mb-3 text-gray-900">Solution</h3>
-                      <p className="text-gray-600">{study.solution}</p>
-                    </div>
-
-                    <div>
-                      <h3 className="mb-3 text-gray-900">Results</h3>
-                      <ul className="space-y-2">
-                        {study.results.map((result, resultIndex) => (
-                          <li key={resultIndex} className="flex items-start text-gray-700">
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full mt-2 mr-2 flex-shrink-0 ${
-                                study.color === 'orange'
-                                  ? 'bg-orange-500'
-                                  : study.color === 'blue'
-                                  ? 'bg-blue-600'
-                                  : 'bg-green-600'
-                              }`}
-                            ></span>
-                            {result}
-                          </li>
-                        ))}
-                      </ul>
+                    <div className="absolute top-3 left-3">
+                      <span className="px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700">{study.industry}</span>
                     </div>
                   </div>
-
-                  <div className="mt-6">
-                    <a
-                      href="#"
-                      className={`inline-flex items-center ${
-                        study.color === 'orange'
-                          ? 'text-orange-500 hover:text-orange-600'
-                          : study.color === 'blue'
-                          ? 'text-blue-600 hover:text-blue-700'
-                          : 'text-green-600 hover:text-green-700'
-                      } transition-colors`}
-                    >
-                      Read Full Case Study
-                      <ArrowRight className="ml-2 w-4 h-4" />
-                    </a>
+                  {/* Content */}
+                  <div className="flex-1 p-6 md:p-8">
+                    <h2 className="text-xl md:text-2xl text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">{study.client}</h2>
+                    <p className="text-gray-600 mb-4 line-clamp-2">{study.challenge}</p>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {study.results.slice(0, 3).map((result, ri) => (
+                        <span key={ri} className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full">
+                          <CheckCircle className="w-3 h-3" /> {result}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="inline-flex items-center text-sm font-medium text-orange-600 group-hover:gap-2 transition-all">
+                      Read Full Case Study <ArrowRight className="ml-1 w-4 h-4" />
+                    </span>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, MoveUp, MoveDown, Eye, EyeOff } from 'lucide-react';
 import { apiFetch } from '../../utils/storage';
+import { ImageUpload } from '../../components/ImageUpload';
 
 interface Customer {
   id: string;
   name: string;
   logo: string;
   industry: string;
+  published: boolean;
 }
 
 interface Testimonial {
@@ -18,6 +20,7 @@ interface Testimonial {
   content: string;
   rating: number;
   avatar: string;
+  published: boolean;
 }
 
 export function AdminCustomers() {
@@ -110,9 +113,9 @@ export function AdminCustomers() {
     e.preventDefault();
     let updated: Customer[];
     if (editingCustomer) {
-      updated = customers.map((c) => (c.id === editingCustomer.id ? { ...customerForm, id: c.id } : c));
+      updated = customers.map((c) => (c.id === editingCustomer.id ? { ...customerForm, id: c.id, published: c.published ?? true } : c));
     } else {
-      updated = [...customers, { ...customerForm, id: Date.now().toString() }];
+      updated = [...customers, { ...customerForm, id: Date.now().toString(), published: true }];
     }
     setCustomers(updated);
     setIsCustomerModalOpen(false);
@@ -124,10 +127,10 @@ export function AdminCustomers() {
     let updated: Testimonial[];
     if (editingTestimonial) {
       updated = testimonials.map((t) =>
-        t.id === editingTestimonial.id ? { ...testimonialForm, id: t.id } : t
+        t.id === editingTestimonial.id ? { ...testimonialForm, id: t.id, published: t.published ?? true } : t
       );
     } else {
-      updated = [...testimonials, { ...testimonialForm, id: Date.now().toString() }];
+      updated = [...testimonials, { ...testimonialForm, id: Date.now().toString(), published: true }];
     }
     setTestimonials(updated);
     setIsTestimonialModalOpen(false);
@@ -148,6 +151,36 @@ export function AdminCustomers() {
       setTestimonials(updated);
       await saveToServer(customers, updated);
     }
+  };
+
+  const moveCustomer = async (index: number, direction: 'up' | 'down') => {
+    const target = direction === 'up' ? index - 1 : index + 1;
+    if (target < 0 || target >= customers.length) return;
+    const updated = [...customers];
+    [updated[index], updated[target]] = [updated[target], updated[index]];
+    setCustomers(updated);
+    await saveToServer(updated, testimonials);
+  };
+
+  const moveTestimonial = async (index: number, direction: 'up' | 'down') => {
+    const target = direction === 'up' ? index - 1 : index + 1;
+    if (target < 0 || target >= testimonials.length) return;
+    const updated = [...testimonials];
+    [updated[index], updated[target]] = [updated[target], updated[index]];
+    setTestimonials(updated);
+    await saveToServer(customers, updated);
+  };
+
+  const toggleCustomerPublished = async (id: string) => {
+    const updated = customers.map((c) => (c.id === id ? { ...c, published: !(c.published ?? true) } : c));
+    setCustomers(updated);
+    await saveToServer(updated, testimonials);
+  };
+
+  const toggleTestimonialPublished = async (id: string) => {
+    const updated = testimonials.map((t) => (t.id === id ? { ...t, published: !(t.published ?? true) } : t));
+    setTestimonials(updated);
+    await saveToServer(customers, updated);
   };
 
   return (
@@ -185,15 +218,22 @@ export function AdminCustomers() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {customers.map((customer) => (
-              <div key={customer.id} className="border border-gray-200 rounded-lg p-4">
+            {customers.map((customer, index) => (
+              <div key={customer.id} className={`border rounded-lg p-4 ${(customer.published ?? true) ? 'border-gray-200' : 'border-dashed border-gray-300 opacity-60'}`}>
                 <img
                   src={customer.logo}
                   alt={customer.name}
                   className="w-full h-20 object-contain mb-3"
                 />
                 <h3 className="text-sm text-gray-900 mb-1 truncate">{customer.name}</h3>
-                <p className="text-xs text-gray-500 mb-3">{customer.industry}</p>
+                <p className="text-xs text-gray-500 mb-2">{customer.industry}</p>
+                <div className="flex items-center gap-1 mb-2">
+                  <button onClick={() => moveCustomer(index, 'up')} disabled={index === 0} className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"><MoveUp className="w-3 h-3" /></button>
+                  <button onClick={() => moveCustomer(index, 'down')} disabled={index === customers.length - 1} className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"><MoveDown className="w-3 h-3" /></button>
+                  <button onClick={() => toggleCustomerPublished(customer.id)} className="p-1 text-gray-400 hover:text-gray-600" title={(customer.published ?? true) ? 'Hide' : 'Show'}>
+                    {(customer.published ?? true) ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                  </button>
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleOpenCustomerModal(customer)}
@@ -229,8 +269,8 @@ export function AdminCustomers() {
           </div>
 
           <div className="space-y-4">
-            {testimonials.map((testimonial) => (
-              <div key={testimonial.id} className="border border-gray-200 rounded-lg p-4">
+            {testimonials.map((testimonial, index) => (
+              <div key={testimonial.id} className={`border rounded-lg p-4 ${(testimonial.published ?? true) ? 'border-gray-200' : 'border-dashed border-gray-300 opacity-60'}`}>
                 <div className="flex items-start gap-4">
                   <img
                     src={testimonial.avatar}
@@ -252,16 +292,21 @@ export function AdminCustomers() {
                           ))}
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => moveTestimonial(index, 'up')} disabled={index === 0} className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"><MoveUp className="w-4 h-4" /></button>
+                        <button onClick={() => moveTestimonial(index, 'down')} disabled={index === testimonials.length - 1} className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"><MoveDown className="w-4 h-4" /></button>
+                        <button onClick={() => toggleTestimonialPublished(testimonial.id)} className="p-1 text-gray-400 hover:text-gray-600" title={(testimonial.published ?? true) ? 'Hide' : 'Show'}>
+                          {(testimonial.published ?? true) ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                        </button>
                         <button
                           onClick={() => handleOpenTestimonialModal(testimonial)}
-                          className="text-blue-600 hover:text-blue-700"
+                          className="p-1 text-blue-600 hover:text-blue-700"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteTestimonial(testimonial.id)}
-                          className="text-red-600 hover:text-red-700"
+                          className="p-1 text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -297,21 +342,12 @@ export function AdminCustomers() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-700 mb-1">Logo URL</label>
-                    <input
-                      type="url"
+                    <ImageUpload
                       value={customerForm.logo}
-                      onChange={(e) => setCustomerForm({ ...customerForm, logo: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      required
+                      onChange={(url) => setCustomerForm({ ...customerForm, logo: url })}
+                      label="Company Logo"
+                      previewClassName="w-32 h-20 object-contain border border-gray-200 rounded"
                     />
-                    {customerForm.logo && (
-                      <img
-                        src={customerForm.logo}
-                        alt="Logo preview"
-                        className="mt-2 w-32 h-20 object-contain border border-gray-200 rounded"
-                      />
-                    )}
                   </div>
                   <div>
                     <label className="block text-sm text-gray-700 mb-1">Industry</label>
@@ -426,25 +462,14 @@ export function AdminCustomers() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-700 mb-1">Avatar URL</label>
-                      <input
-                        type="url"
+                      <ImageUpload
                         value={testimonialForm.avatar}
-                        onChange={(e) =>
-                          setTestimonialForm({ ...testimonialForm, avatar: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                        required
+                        onChange={(url) => setTestimonialForm({ ...testimonialForm, avatar: url })}
+                        label="Avatar"
+                        previewClassName="w-16 h-16 rounded-full object-cover"
                       />
                     </div>
                   </div>
-                  {testimonialForm.avatar && (
-                    <img
-                      src={testimonialForm.avatar}
-                      alt="Avatar preview"
-                      className="w-16 h-16 rounded-full object-cover"
-                    />
-                  )}
                   <div className="flex gap-3 pt-4">
                     <button
                       type="submit"

@@ -1,6 +1,7 @@
 import { AdminLayout } from '../../../components/AdminLayout';
 import { Save } from 'lucide-react';
 import { useAdminContent } from '../../../hooks/useAdminContent';
+import { ImageUpload } from '../../../components/ImageUpload';
 
 export function AdminAboutCompanyOverview() {
   const defaultData = {
@@ -9,11 +10,14 @@ export function AdminAboutCompanyOverview() {
     heroImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab',
     companyDescription:
       'SuperCorridor is a premier Internet Service Provider dedicated to delivering enterprise-grade connectivity solutions across Indonesia. Since our inception, we have been committed to building robust network infrastructure that powers businesses and drives digital transformation.',
-    founded: '2010',
-    headquarters: 'Jakarta, Indonesia',
-    employees: '500+',
-    customers: '1,000+',
-    coverage: '50+ Cities',
+    additionalDescription:
+      "Our extensive fiber-optic infrastructure spans across major business districts, connecting enterprises to the digital world with unmatched speed and reliability. We serve over 500 corporate clients, from startups to Fortune 500 companies.\n\nAt SuperCorridor, we believe that connectivity is the foundation of modern business. That's why we're committed to delivering not just internet service, but complete network solutions that empower organizations to achieve their digital transformation goals.",
+    stats: [
+      { value: '500+', label: 'Enterprise Clients' },
+      { value: '50+', label: 'Cities Covered' },
+      { value: '99.99%', label: 'Network Uptime' },
+      { value: '15+', label: 'Years Experience' },
+    ],
     values: [
       { title: 'Innovation', description: 'Continuously advancing our technology and services' },
       { title: 'Reliability', description: 'Delivering consistent, high-quality connectivity' },
@@ -72,12 +76,10 @@ export function AdminAboutCompanyOverview() {
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-700 mb-1">Hero Image URL</label>
-                <input
-                  type="url"
+                <ImageUpload
                   value={formData.heroImage}
-                  onChange={(e) => setFormData({ ...formData, heroImage: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  onChange={(url) => setFormData({ ...formData, heroImage: url })}
+                  label="Hero Image"
                 />
               </div>
               <div>
@@ -95,53 +97,50 @@ export function AdminAboutCompanyOverview() {
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl text-gray-900 mb-4">Company Facts</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Founded Year</label>
-                <input
-                  type="text"
-                  value={formData.founded}
-                  onChange={(e) => setFormData({ ...formData, founded: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Headquarters</label>
-                <input
-                  type="text"
-                  value={formData.headquarters}
-                  onChange={(e) => setFormData({ ...formData, headquarters: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Employees</label>
-                <input
-                  type="text"
-                  value={formData.employees}
-                  onChange={(e) => setFormData({ ...formData, employees: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Customers</label>
-                <input
-                  type="text"
-                  value={formData.customers}
-                  onChange={(e) => setFormData({ ...formData, customers: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Coverage</label>
-                <input
-                  type="text"
-                  value={formData.coverage}
-                  onChange={(e) => setFormData({ ...formData, coverage: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-              </div>
+            <h2 className="text-xl text-gray-900 mb-4">Additional Description</h2>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Additional paragraphs (separate with blank line)</label>
+              <textarea
+                value={formData.additionalDescription}
+                onChange={(e) => setFormData({ ...formData, additionalDescription: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                rows={5}
+              />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl text-gray-900 mb-4">Statistics</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(formData.stats ?? []).map((stat, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-sm text-gray-700 mb-2">Stat {index + 1}</h3>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Value (e.g. 500+)"
+                      value={stat.value}
+                      onChange={(e) => {
+                        const newStats = [...(formData.stats ?? [])];
+                        newStats[index] = { ...newStats[index], value: e.target.value };
+                        setFormData({ ...formData, stats: newStats });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Label (e.g. Enterprise Clients)"
+                      value={stat.label}
+                      onChange={(e) => {
+                        const newStats = [...(formData.stats ?? [])];
+                        newStats[index] = { ...newStats[index], label: e.target.value };
+                        setFormData({ ...formData, stats: newStats });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

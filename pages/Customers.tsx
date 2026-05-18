@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Building2, Quote } from 'lucide-react';
 
 interface Testimonial {
@@ -218,12 +219,12 @@ export function Customers() {
           <p className="text-xl opacity-90 mb-6">
             Discover why leading enterprises trust SuperCorridor for their connectivity needs.
           </p>
-          <a
-            href="/contact"
+          <Link
+            to="/contact"
             className="inline-block bg-white text-blue-600 px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors"
           >
             Get Started Today
-          </a>
+          </Link>
         </div>
       </section>
     </div>

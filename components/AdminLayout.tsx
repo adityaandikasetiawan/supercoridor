@@ -7,6 +7,7 @@ import {
   Network,
   FileText,
   Users,
+  Users2,
   Briefcase,
   Mail,
   Settings,
@@ -17,6 +18,7 @@ import {
   Globe,
   Info,
   Layers,
+  Cpu,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -49,16 +51,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       ? [
           { path: '/admin/home', icon: Home, label: 'Home Page' },
           { path: '/admin/tgcs-management', icon: Layers, label: 'TGCS Project' },
-          {
-            label: 'Solutions',
-            icon: Network,
-            submenu: [
-              { path: '/admin/solutions/dedicated-connectivity', label: 'Dedicated Connectivity' },
-              { path: '/admin/solutions/backbone-network', label: 'Backbone & Network' },
-              { path: '/admin/solutions/cloud-interconnection', label: 'Cloud Interconnection' },
-              { path: '/admin/solutions/value-added-services', label: 'Value-Added Services' },
-            ],
-          },
+          { path: '/admin/solutions', icon: Network, label: 'Solutions' },
+          { path: '/admin/technology', icon: Cpu, label: 'Technology' },
           {
             label: 'About Us',
             icon: Info,
@@ -96,6 +90,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         ]
       : []),
     { path: '/admin/settings', icon: Settings, label: 'Settings' },
+    ...(role === 'super_admin' ? [{ path: '/admin/users', icon: Users2, label: 'User Management' }] : []),
   ];
 
   return (

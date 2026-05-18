@@ -50,6 +50,18 @@ export function Home() {
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [activeTab, setActiveTab] = useState<'small' | 'enterprise'>('small');
+  const [homeStats, setHomeStats] = useState([
+    { label: 'Network Coverage', value: '50+', suffix: 'Cities' },
+    { label: 'Enterprise Clients', value: '1,000+', suffix: 'Companies' },
+    { label: 'Network Uptime', value: '99.99%', suffix: 'SLA' },
+    { label: 'Data Centers', value: '15+', suffix: 'Locations' },
+  ]);
+  const [homeFeatures, setHomeFeatures] = useState([
+    { title: 'Ultra-Fast Connectivity', description: 'Dedicated fiber optic infrastructure with speeds up to 100Gbps' },
+    { title: '24/7 Support', description: 'Round-the-clock technical support and monitoring' },
+    { title: 'Scalable Solutions', description: 'Flexible bandwidth options that grow with your business' },
+    { title: 'Enterprise Security', description: 'Advanced DDoS protection and network security' },
+  ]);
   const [tgcsData, setTgcsData] = useState(() => ({
     hero: {
       title: 'SuperCorridor TGCS',
@@ -68,7 +80,11 @@ export function Home() {
 
   useEffect(() => {
     const load = async () => {
-      const [slidesRes, tgcsRes] = await Promise.all([fetch('/api/content/hero-slides'), fetch('/api/content/tgcs')]);
+      const [slidesRes, tgcsRes, homeRes] = await Promise.all([
+        fetch('/api/content/hero-slides'),
+        fetch('/api/content/tgcs'),
+        fetch('/api/content/home-management'),
+      ]);
       if (slidesRes.ok) {
         const data = (await slidesRes.json()) as { ok: true; heroSlides: HeroSlide[] };
         setHeroSlides(data.heroSlides);
@@ -77,6 +93,15 @@ export function Home() {
       if (tgcsRes.ok) {
         const data = (await tgcsRes.json()) as { ok: true; tgcs: typeof tgcsData };
         setTgcsData(data.tgcs);
+      }
+      if (homeRes.ok) {
+        const data = (await homeRes.json()) as { ok: true; homeManagement: { heroData: { title: string; subtitle: string; ctaText: string; ctaLink: string; backgroundImage: string }; stats: { label: string; value: string; suffix: string }[]; features?: { title: string; description: string }[] } | null };
+        if (data.homeManagement?.stats) {
+          setHomeStats(data.homeManagement.stats);
+        }
+        if (data.homeManagement?.features && data.homeManagement.features.length > 0) {
+          setHomeFeatures(data.homeManagement.features);
+        }
       }
     };
     void load();
@@ -101,7 +126,7 @@ export function Home() {
   return (
     <div className="bg-white">
       {/* Hero Carousel */}
-      <section className="relative h-[600px] overflow-hidden">
+      <section className="relative h-[450px] md:h-[600px] overflow-hidden">
         {heroSlides.map((slide, index) => (
           <div
             key={slide.id}
@@ -138,12 +163,14 @@ export function Home() {
         {/* Navigation Arrows */}
         <button
           onClick={prevSlide}
+          aria-label="Previous slide"
           className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-3 rounded-full transition-colors z-10"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
         <button
           onClick={nextSlide}
+          aria-label="Next slide"
           className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-3 rounded-full transition-colors z-10"
         >
           <ChevronRight className="w-6 h-6" />
@@ -155,6 +182,7 @@ export function Home() {
             <button
               key={index}
               onClick={() => setCurrentSlide(index)}
+              aria-label={`Go to slide ${index + 1}`}
               className={`w-3 h-3 rounded-full transition-all ${
                 index === currentSlide ? 'bg-white w-8' : 'bg-white/50'
               }`}
@@ -387,6 +415,21 @@ export function Home() {
         </div>
       </section>
 
+      {/* Stats Counter */}
+      <section className="py-12 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {homeStats.map((stat, index) => (
+              <div key={index} className="text-center">
+                <div className="text-3xl lg:text-4xl text-orange-600 mb-1">{stat.value}</div>
+                <div className="text-gray-600">{stat.label}</div>
+                <div className="text-sm text-gray-500">{stat.suffix}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Features Grid */}
       <section className="py-16 lg:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -396,37 +439,27 @@ export function Home() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-white p-8 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
-                <Zap className="w-8 h-8 text-orange-600" />
-              </div>
-              <h3 className="text-xl text-gray-900 mb-3">Ultra-Fast Connectivity</h3>
-              <p className="text-gray-600">Dedicated fiber optic infrastructure with speeds up to 100Gbps</p>
-            </div>
+            {homeFeatures.map((feature, index) => {
+              const icons = [Zap, Headphones, Network, Shield];
+              const colors = [
+                { bg: 'bg-orange-100', text: 'text-orange-600' },
+                { bg: 'bg-blue-100', text: 'text-blue-600' },
+                { bg: 'bg-green-100', text: 'text-green-600' },
+                { bg: 'bg-purple-100', text: 'text-purple-600' },
+              ];
+              const Icon = icons[index % icons.length];
+              const color = colors[index % colors.length];
 
-            <div className="bg-white p-8 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <Headphones className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="text-xl text-gray-900 mb-3">24/7 Support</h3>
-              <p className="text-gray-600">Round-the-clock technical support and monitoring</p>
-            </div>
-
-            <div className="bg-white p-8 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <Network className="w-8 h-8 text-green-600" />
-              </div>
-              <h3 className="text-xl text-gray-900 mb-3">Scalable Solutions</h3>
-              <p className="text-gray-600">Flexible bandwidth options that grow with your business</p>
-            </div>
-
-            <div className="bg-white p-8 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-                <Shield className="w-8 h-8 text-purple-600" />
-              </div>
-              <h3 className="text-xl text-gray-900 mb-3">Enterprise Security</h3>
-              <p className="text-gray-600">Advanced DDoS protection and network security</p>
-            </div>
+              return (
+                <div key={index} className="bg-white p-8 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                  <div className={`w-16 h-16 ${color.bg} rounded-full flex items-center justify-center mb-4`}>
+                    <Icon className={`w-8 h-8 ${color.text}`} />
+                  </div>
+                  <h3 className="text-xl text-gray-900 mb-3">{feature.title}</h3>
+                  <p className="text-gray-600">{feature.description}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

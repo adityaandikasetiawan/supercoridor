@@ -179,13 +179,13 @@ export function Contact() {
                 </button>
 
                 {submitState === 'success' && (
-                  <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+                  <div role="alert" className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
                     Thank you for your interest! Our team will contact you shortly.
                   </div>
                 )}
 
                 {submitState === 'error' && (
-                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                  <div role="alert" className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
                     Something went wrong. Please try again or contact us directly.
                   </div>
                 )}

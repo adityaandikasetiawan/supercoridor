@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { apiFetch } from '../../utils/storage';
+import { ImageUpload } from '../../components/ImageUpload';
+import { RichTextEditor } from '../../components/RichTextEditor';
 
 interface CaseStudy {
   id: string;
@@ -272,43 +274,40 @@ export function AdminResourcesCaseStudies() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-700 mb-1">Challenge</label>
-                    <textarea
+                    <RichTextEditor
                       value={formData.challenge}
-                      onChange={(e) => setFormData({ ...formData, challenge: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      rows={3}
-                      required
+                      onChange={(val) => setFormData({ ...formData, challenge: val })}
+                      label="Challenge"
+                      placeholder="Describe the client's challenge..."
+                      height="200px"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-700 mb-1">Solution</label>
-                    <textarea
+                    <RichTextEditor
                       value={formData.solution}
-                      onChange={(e) => setFormData({ ...formData, solution: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      rows={3}
-                      required
+                      onChange={(val) => setFormData({ ...formData, solution: val })}
+                      label="Solution"
+                      placeholder="Describe the solution provided..."
+                      height="200px"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-700 mb-1">Results</label>
+                    <label className="block text-sm text-gray-700 mb-1">Results (separate with semicolons)</label>
                     <textarea
                       value={formData.results}
                       onChange={(e) => setFormData({ ...formData, results: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      rows={2}
+                      rows={3}
                       required
+                      placeholder="99.99% uptime; 50% cost reduction; 3x faster deployment"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Separate each result with a semicolon (;)</p>
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-700 mb-1">Image URL</label>
-                    <input
-                      type="url"
+                    <ImageUpload
                       value={formData.image}
-                      onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      required
+                      onChange={(url) => setFormData({ ...formData, image: url })}
+                      label="Case Study Image"
                     />
                   </div>
                   <div className="flex items-center">

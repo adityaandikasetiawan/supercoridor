@@ -21,14 +21,18 @@ export const apiFetch = async (input: RequestInfo | URL, init?: RequestInit, att
     csrfToken = getCookieValue('csrf_token');
   }
 
+  // Don't set Content-Type for FormData — browser sets it with boundary automatically
+  const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData;
+  const headers: Record<string, string> = {
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+    ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+    ...((init?.headers as Record<string, string>) ?? {}),
+  };
+
   const response = await fetch(input, {
     ...init,
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
-      ...(init?.headers ?? {}),
-    },
+    headers,
   });
 
   if (response.status !== 401 || !attemptRefresh) return response;

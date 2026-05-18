@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { useAuth } from '../../contexts/AuthContext';
-import { Save, User, Lock, Bell, Globe } from 'lucide-react';
+import { Save, User, Lock, Bell, Globe, Share2, Search, Shield } from 'lucide-react';
 import { apiFetch } from '../../utils/storage';
+import { ImageUpload } from '../../components/ImageUpload';
 
 export function Settings() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<'profile' | 'website' | 'social' | 'seo' | 'notifications' | 'advanced'>('profile');
   const { user } = useAuth();
   const role = user?.role === 'admin' ? 'super_admin' : user?.role;
   const roleLabel =
@@ -36,6 +38,31 @@ export function Settings() {
     phone: '021-4587 8409',
     email: 'ask@supercorridor.co.id',
     address: 'Artha Gading Niaga Blok E 11, 12, 15A Kelapa Gading, Jakarta 14240 Indonesia',
+    logo: '',
+    favicon: '',
+  });
+
+  const [social, setSocial] = useState({
+    facebook: '',
+    twitter: '',
+    linkedin: '',
+    instagram: '',
+    youtube: '',
+    whatsapp: '',
+  });
+
+  const [seo, setSeo] = useState({
+    metaTitle: 'SuperCorridor - Enterprise Connectivity Solutions',
+    metaDescription: 'Leading Internet Service Provider in Indonesia delivering enterprise-grade connectivity solutions with 99.99% uptime guarantee.',
+    ogImage: '',
+    googleAnalyticsId: '',
+  });
+
+  const [advanced, setAdvanced] = useState({
+    maintenanceMode: false,
+    maintenanceMessage: 'We are currently performing scheduled maintenance. Please check back soon.',
+    defaultLanguage: 'id' as 'id' | 'en',
+    timezone: 'Asia/Jakarta',
   });
 
   useEffect(() => {
@@ -47,7 +74,10 @@ export function Settings() {
           if (data.settings) {
             if (data.settings.profile) setProfile(data.settings.profile);
             if (data.settings.notifications) setNotifications(data.settings.notifications);
-            if (data.settings.website) setWebsite(data.settings.website);
+            if (data.settings.website) setWebsite((prev) => ({ ...prev, ...data.settings.website }));
+            if (data.settings.social) setSocial((prev) => ({ ...prev, ...data.settings.social }));
+            if (data.settings.seo) setSeo((prev) => ({ ...prev, ...data.settings.seo }));
+            if (data.settings.advanced) setAdvanced((prev) => ({ ...prev, ...data.settings.advanced }));
           }
         }
       } catch {
@@ -63,7 +93,7 @@ export function Settings() {
       const response = await apiFetch('/api/admin/content/settings', {
         method: 'PUT',
         body: JSON.stringify({
-          settings: { profile, notifications, website },
+          settings: { profile, notifications, website, social, seo, advanced },
         }),
       });
       if (response.ok) {
@@ -112,216 +142,300 @@ export function Settings() {
     }
   };
 
+  const tabs = [
+    { key: 'profile' as const, label: 'Profile', icon: User },
+    { key: 'website' as const, label: 'Website', icon: Globe },
+    { key: 'social' as const, label: 'Social Media', icon: Share2 },
+    { key: 'seo' as const, label: 'SEO', icon: Search },
+    { key: 'notifications' as const, label: 'Notifications', icon: Bell },
+    { key: 'advanced' as const, label: 'Advanced', icon: Shield },
+  ];
+
   return (
     <AdminLayout>
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl mb-2">Settings</h1>
-          <p className="text-gray-600">Manage your account and website settings</p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl text-gray-900">Settings</h1>
+            <p className="text-gray-600 mt-1">Manage your account and website settings</p>
+          </div>
+          <button
+            onClick={handleSave}
+            className="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {saved ? 'Saved!' : 'Save All'}
+          </button>
         </div>
-        <button
-          onClick={handleSave}
-          className="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          {saved ? 'Saved!' : 'Save Changes'}
-        </button>
-      </div>
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-          {error}
-        </div>
-      )}
+        {error && (
+          <div role="alert" className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{error}</div>
+        )}
+        {saved && (
+          <div role="alert" className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">Changes saved successfully!</div>
+        )}
 
-      {saved && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-          Changes saved successfully!
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <nav className="flex gap-1 overflow-x-auto">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 pb-3 px-3 border-b-2 transition-colors whitespace-nowrap text-sm ${
+                  activeTab === tab.key ? 'border-orange-600 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            ))}
+          </nav>
         </div>
-      )}
 
-      {/* Profile Settings */}
-      <div className="bg-white rounded-xl shadow-sm p-6 border-2 border-gray-100 mb-6">
-        <h2 className="text-xl mb-4 flex items-center">
-          <User className="w-5 h-5 mr-2 text-orange-600" />
-          Profile Settings
-        </h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm mb-2">Full Name</label>
-            <input
-              type="text"
-              value={profile.name}
-              onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm mb-2">Email Address</label>
-            <input
-              type="email"
-              value={profile.email}
-              onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm mb-2">Phone Number</label>
-            <input
-              type="tel"
-              value={profile.phone}
-              onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm mb-2">Role</label>
-            <input
-              type="text"
-              value={roleLabel}
-              disabled
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50"
-            />
-          </div>
-        </div>
-      </div>
+        {/* Profile Tab */}
+        {activeTab === 'profile' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+              <h2 className="text-lg text-gray-900 mb-4 flex items-center gap-2">
+                <User className="w-5 h-5 text-orange-600" /> Profile Information
+              </h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Full Name</label>
+                  <input type="text" value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Email Address</label>
+                  <input type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Phone Number</label>
+                  <input type="tel" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Role</label>
+                  <input type="text" value={roleLabel} disabled className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" />
+                </div>
+              </div>
+            </div>
 
-      {/* Password Settings */}
-      <div className="bg-white rounded-xl shadow-sm p-6 border-2 border-gray-100 mb-6">
-        <h2 className="text-xl mb-4 flex items-center">
-          <Lock className="w-5 h-5 mr-2 text-orange-600" />
-          Change Password
-        </h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <label className="block text-sm mb-2">Current Password</label>
-            <input
-              type="password"
-              value={passwords.current}
-              onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
-            />
+            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+              <h2 className="text-lg text-gray-900 mb-4 flex items-center gap-2">
+                <Lock className="w-5 h-5 text-orange-600" /> Change Password
+              </h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-gray-700 mb-1">Current Password</label>
+                  <input type="password" value={passwords.current} onChange={(e) => setPasswords({ ...passwords, current: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">New Password</label>
+                  <input type="password" value={passwords.newPassword} onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Confirm New Password</label>
+                  <input type="password" value={passwords.confirm} onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+                <div className="md:col-span-2">
+                  <button type="button" onClick={handleChangePassword} className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors text-sm">
+                    Update Password
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm mb-2">New Password</label>
-            <input
-              type="password"
-              value={passwords.newPassword}
-              onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm mb-2">Confirm New Password</label>
-            <input
-              type="password"
-              value={passwords.confirm}
-              onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <button
-              type="button"
-              onClick={handleChangePassword}
-              className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors"
-            >
-              Update Password
-            </button>
-          </div>
-        </div>
-      </div>
+        )}
 
-      {/* Notification Settings */}
-      <div className="bg-white rounded-xl shadow-sm p-6 border-2 border-gray-100 mb-6">
-        <h2 className="text-xl mb-4 flex items-center">
-          <Bell className="w-5 h-5 mr-2 text-orange-600" />
-          Notification Settings
-        </h2>
-        <div className="space-y-4">
-          <label className="flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-            <span>Email notifications for new contact messages</span>
-            <input
-              type="checkbox"
-              checked={notifications.contactMessages}
-              onChange={(e) => setNotifications({ ...notifications, contactMessages: e.target.checked })}
-              className="w-5 h-5"
-            />
-          </label>
-          <label className="flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-            <span>Email notifications for new job applications</span>
-            <input
-              type="checkbox"
-              checked={notifications.jobApplications}
-              onChange={(e) => setNotifications({ ...notifications, jobApplications: e.target.checked })}
-              className="w-5 h-5"
-            />
-          </label>
-          <label className="flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-            <span>Weekly summary report</span>
-            <input
-              type="checkbox"
-              checked={notifications.weeklySummary}
-              onChange={(e) => setNotifications({ ...notifications, weeklySummary: e.target.checked })}
-              className="w-5 h-5"
-            />
-          </label>
-          <label className="flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-            <span>System updates and maintenance alerts</span>
-            <input
-              type="checkbox"
-              checked={notifications.systemUpdates}
-              onChange={(e) => setNotifications({ ...notifications, systemUpdates: e.target.checked })}
-              className="w-5 h-5"
-            />
-          </label>
-        </div>
-      </div>
+        {/* Website Tab */}
+        {activeTab === 'website' && (
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <h2 className="text-lg text-gray-900 mb-4 flex items-center gap-2">
+              <Globe className="w-5 h-5 text-orange-600" /> Website Information
+            </h2>
+            <div className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Website Name</label>
+                  <input type="text" value={website.name} onChange={(e) => setWebsite({ ...website, name: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Company Phone</label>
+                  <input type="text" value={website.phone} onChange={(e) => setWebsite({ ...website, phone: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Company Email</label>
+                <input type="email" value={website.email} onChange={(e) => setWebsite({ ...website, email: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Address</label>
+                <textarea value={website.address} onChange={(e) => setWebsite({ ...website, address: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" rows={3} />
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <ImageUpload value={website.logo} onChange={(url) => setWebsite({ ...website, logo: url })} label="Website Logo" previewClassName="h-12 object-contain rounded" />
+                </div>
+                <div>
+                  <ImageUpload value={website.favicon} onChange={(url) => setWebsite({ ...website, favicon: url })} label="Favicon" previewClassName="w-8 h-8 object-contain rounded" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-      {/* Website Settings */}
-      <div className="bg-white rounded-xl shadow-sm p-6 border-2 border-gray-100">
-        <h2 className="text-xl mb-4 flex items-center">
-          <Globe className="w-5 h-5 mr-2 text-orange-600" />
-          Website Settings
-        </h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm mb-2">Website Name</label>
-            <input
-              type="text"
-              value={website.name}
-              onChange={(e) => setWebsite({ ...website, name: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
-            />
+        {/* Social Media Tab */}
+        {activeTab === 'social' && (
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <h2 className="text-lg text-gray-900 mb-4 flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-orange-600" /> Social Media Links
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">Add your social media URLs. Leave blank to hide from the website.</p>
+            <div className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Facebook</label>
+                  <input type="url" value={social.facebook} onChange={(e) => setSocial({ ...social, facebook: e.target.value })} placeholder="https://facebook.com/supercorridor" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Twitter / X</label>
+                  <input type="url" value={social.twitter} onChange={(e) => setSocial({ ...social, twitter: e.target.value })} placeholder="https://twitter.com/supercorridor" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">LinkedIn</label>
+                  <input type="url" value={social.linkedin} onChange={(e) => setSocial({ ...social, linkedin: e.target.value })} placeholder="https://linkedin.com/company/supercorridor" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Instagram</label>
+                  <input type="url" value={social.instagram} onChange={(e) => setSocial({ ...social, instagram: e.target.value })} placeholder="https://instagram.com/supercorridor" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">YouTube</label>
+                  <input type="url" value={social.youtube} onChange={(e) => setSocial({ ...social, youtube: e.target.value })} placeholder="https://youtube.com/@supercorridor" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">WhatsApp</label>
+                  <input type="text" value={social.whatsapp} onChange={(e) => setSocial({ ...social, whatsapp: e.target.value })} placeholder="+62 812-3456-7890" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm mb-2">Company Phone</label>
-            <input
-              type="text"
-              value={website.phone}
-              onChange={(e) => setWebsite({ ...website, phone: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
-            />
+        )}
+
+        {/* SEO Tab */}
+        {activeTab === 'seo' && (
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <h2 className="text-lg text-gray-900 mb-4 flex items-center gap-2">
+              <Search className="w-5 h-5 text-orange-600" /> SEO Settings
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">Configure default meta tags for search engine optimization.</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Meta Title</label>
+                <input type="text" value={seo.metaTitle} onChange={(e) => setSeo({ ...seo, metaTitle: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                <p className="text-xs text-gray-500 mt-1">{seo.metaTitle.length}/60 characters (recommended max 60)</p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Meta Description</label>
+                <textarea value={seo.metaDescription} onChange={(e) => setSeo({ ...seo, metaDescription: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" rows={3} />
+                <p className="text-xs text-gray-500 mt-1">{seo.metaDescription.length}/160 characters (recommended max 160)</p>
+              </div>
+              <div>
+                <ImageUpload value={seo.ogImage} onChange={(url) => setSeo({ ...seo, ogImage: url })} label="Open Graph Image (shared on social media)" previewClassName="w-full h-32 object-cover rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Google Analytics ID</label>
+                <input type="text" value={seo.googleAnalyticsId} onChange={(e) => setSeo({ ...seo, googleAnalyticsId: e.target.value })} placeholder="G-XXXXXXXXXX" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm mb-2">Company Email</label>
-            <input
-              type="email"
-              value={website.email}
-              onChange={(e) => setWebsite({ ...website, email: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
-            />
+        )}
+
+        {/* Notifications Tab */}
+        {activeTab === 'notifications' && (
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <h2 className="text-lg text-gray-900 mb-4 flex items-center gap-2">
+              <Bell className="w-5 h-5 text-orange-600" /> Notification Preferences
+            </h2>
+            <div className="space-y-3">
+              <label className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <div>
+                  <span className="text-sm text-gray-900">New contact messages</span>
+                  <p className="text-xs text-gray-500">Get notified when someone submits the contact form</p>
+                </div>
+                <input type="checkbox" checked={notifications.contactMessages} onChange={(e) => setNotifications({ ...notifications, contactMessages: e.target.checked })} className="w-5 h-5 text-orange-600 rounded" />
+              </label>
+              <label className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <div>
+                  <span className="text-sm text-gray-900">New job applications</span>
+                  <p className="text-xs text-gray-500">Get notified when someone applies for a job</p>
+                </div>
+                <input type="checkbox" checked={notifications.jobApplications} onChange={(e) => setNotifications({ ...notifications, jobApplications: e.target.checked })} className="w-5 h-5 text-orange-600 rounded" />
+              </label>
+              <label className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <div>
+                  <span className="text-sm text-gray-900">Weekly summary report</span>
+                  <p className="text-xs text-gray-500">Receive a weekly digest of website activity</p>
+                </div>
+                <input type="checkbox" checked={notifications.weeklySummary} onChange={(e) => setNotifications({ ...notifications, weeklySummary: e.target.checked })} className="w-5 h-5 text-orange-600 rounded" />
+              </label>
+              <label className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <div>
+                  <span className="text-sm text-gray-900">System updates</span>
+                  <p className="text-xs text-gray-500">Get notified about maintenance and system updates</p>
+                </div>
+                <input type="checkbox" checked={notifications.systemUpdates} onChange={(e) => setNotifications({ ...notifications, systemUpdates: e.target.checked })} className="w-5 h-5 text-orange-600 rounded" />
+              </label>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm mb-2">Address</label>
-            <textarea
-              value={website.address}
-              onChange={(e) => setWebsite({ ...website, address: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
-              rows={3}
-            />
+        )}
+
+        {/* Advanced Tab */}
+        {activeTab === 'advanced' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+              <h2 className="text-lg text-gray-900 mb-4 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-orange-600" /> Maintenance Mode
+              </h2>
+              <div className="space-y-4">
+                <label className="flex items-center justify-between p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                  <div>
+                    <span className="text-sm text-gray-900 font-medium">Enable Maintenance Mode</span>
+                    <p className="text-xs text-gray-500">When enabled, visitors will see a maintenance page instead of the website</p>
+                  </div>
+                  <input type="checkbox" checked={advanced.maintenanceMode} onChange={(e) => setAdvanced({ ...advanced, maintenanceMode: e.target.checked })} className="w-5 h-5 text-red-600 rounded" />
+                </label>
+                {advanced.maintenanceMode && (
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Maintenance Message</label>
+                    <textarea value={advanced.maintenanceMessage} onChange={(e) => setAdvanced({ ...advanced, maintenanceMessage: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" rows={3} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+              <h2 className="text-lg text-gray-900 mb-4">Localization</h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Default Language</label>
+                  <select value={advanced.defaultLanguage} onChange={(e) => setAdvanced({ ...advanced, defaultLanguage: e.target.value as 'id' | 'en' })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                    <option value="id">Bahasa Indonesia</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Timezone</label>
+                  <select value={advanced.timezone} onChange={(e) => setAdvanced({ ...advanced, timezone: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                    <option value="Asia/Jakarta">Asia/Jakarta (WIB, UTC+7)</option>
+                    <option value="Asia/Makassar">Asia/Makassar (WITA, UTC+8)</option>
+                    <option value="Asia/Jayapura">Asia/Jayapura (WIT, UTC+9)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </AdminLayout>
   );

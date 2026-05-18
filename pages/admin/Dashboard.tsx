@@ -105,13 +105,16 @@ export function Dashboard() {
     },
   ];
 
-  const recentActivity = [
-    { action: 'New contact message from PT. Telkom Indonesia', time: '5 minutes ago' },
-    { action: 'Job application received for Senior Network Engineer', time: '1 hour ago' },
-    { action: 'Home page content updated', time: '3 hours ago' },
-    { action: 'New case study published', time: '1 day ago' },
-    { action: 'Network coverage map updated', time: '2 days ago' },
-  ];
+  const recentActivity = dashboardStats.newMessages > 0 || dashboardStats.newApplications > 0
+    ? [
+        ...(dashboardStats.newMessages > 0 ? [{ action: `${dashboardStats.newMessages} new contact message(s) waiting for review`, time: 'Recent' }] : []),
+        ...(dashboardStats.newApplications > 0 ? [{ action: `${dashboardStats.newApplications} new job application(s) to review`, time: 'Recent' }] : []),
+        { action: `${dashboardStats.totalMessages} total contact messages`, time: 'All time' },
+        { action: `${dashboardStats.totalApplications} total job applications`, time: 'All time' },
+      ]
+    : [
+        { action: 'No new activity yet', time: 'Start by adding content via the admin panel' },
+      ];
 
   return (
     <AdminLayout>

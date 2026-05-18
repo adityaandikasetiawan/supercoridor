@@ -1,6 +1,7 @@
 import { AdminLayout } from '../../../components/AdminLayout';
 import { Save } from 'lucide-react';
 import { useAdminContent } from '../../../hooks/useAdminContent';
+import { ImageUpload } from '../../../components/ImageUpload';
 
 export function AdminAboutVisionMission() {
   const defaultData = {
@@ -81,12 +82,10 @@ export function AdminAboutVisionMission() {
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-700 mb-1">Hero Image URL</label>
-                <input
-                  type="url"
+                <ImageUpload
                   value={formData.heroImage}
-                  onChange={(e) => setFormData({ ...formData, heroImage: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  onChange={(url) => setFormData({ ...formData, heroImage: url })}
+                  label="Hero Image"
                 />
               </div>
             </div>

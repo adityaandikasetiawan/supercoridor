@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  isLoading: boolean;
   user: User | null;
   login: (email: string, password: string) => Promise<LoginResult>;
   logout: () => void;
@@ -40,6 +41,7 @@ function getCookieValue(name: string) {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
   const apiFetch = useCallback(
@@ -102,16 +104,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const loadMe = async () => {
-      const response = await apiFetch('/api/auth/me', { method: 'GET' }, false);
-      if (!response.ok) {
-        setUser(null);
-        setIsAuthenticated(false);
-        return;
-      }
+      try {
+        const response = await apiFetch('/api/auth/me', { method: 'GET' }, false);
+        if (!response.ok) {
+          setUser(null);
+          setIsAuthenticated(false);
+          return;
+        }
 
-      const data = (await response.json()) as { ok: true; user: User };
-      setUser(data.user);
-      setIsAuthenticated(true);
+        const data = (await response.json()) as { ok: true; user: User };
+        setUser(data.user);
+        setIsAuthenticated(true);
+      } finally {
+        setIsLoading(false);
+      }
     };
     void loadMe();
   }, [apiFetch]);
@@ -163,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

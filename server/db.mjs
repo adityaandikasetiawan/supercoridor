@@ -54,23 +54,6 @@ export async function initDatabase() {
         replaced_by_jti TEXT
       );
 
-      CREATE TABLE IF NOT EXISTS careers_applications (
-        id TEXT PRIMARY KEY,
-        applicant_name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        phone TEXT DEFAULT '',
-        location TEXT DEFAULT '',
-        job_title TEXT DEFAULT '',
-        job_id TEXT DEFAULT '',
-        applied_date TEXT DEFAULT '',
-        resume_url TEXT DEFAULT '',
-        cover_letter TEXT DEFAULT '',
-        status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'reviewed', 'shortlisted', 'rejected')),
-        experience TEXT DEFAULT '',
-        extra_data JSONB DEFAULT '{}',
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
       CREATE TABLE IF NOT EXISTS page_content (
         key TEXT PRIMARY KEY,
         data JSONB NOT NULL DEFAULT '{}',

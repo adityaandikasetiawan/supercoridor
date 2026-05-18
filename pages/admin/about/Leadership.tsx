@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../../components/AdminLayout';
 import { Plus } from 'lucide-react';
 import { apiFetch } from '../../../utils/storage';
+import { ImageUpload } from '../../../components/ImageUpload';
 
 interface TeamMember {
   id: string;
@@ -187,21 +188,12 @@ export function AdminAboutLeadership() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-700 mb-1">Photo URL</label>
-                    <input
-                      type="url"
+                    <ImageUpload
                       value={formData.image}
-                      onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      required
+                      onChange={(url) => setFormData({ ...formData, image: url })}
+                      label="Photo"
+                      previewClassName="w-32 h-32 object-cover rounded"
                     />
-                    {formData.image && (
-                      <img
-                        src={formData.image}
-                        alt="Preview"
-                        className="mt-2 w-32 h-32 object-cover rounded"
-                      />
-                    )}
                   </div>
                   <div>
                     <label className="block text-sm text-gray-700 mb-1">LinkedIn URL</label>

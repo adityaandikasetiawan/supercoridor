@@ -171,13 +171,11 @@ async function seed() {
 
   // 11. Seed Contact Messages (sample)
   const sampleMessages = [
-    { id: crypto.randomBytes(12).toString('base64url'), name: 'John Doe', email: 'john.doe@telkom.co.id', phone: '+62 812-3456-7890', company: 'PT. Telkom Indonesia', subject: 'Inquiry about Dedicated Connectivity', message: 'We are interested in your 10 Gbps dedicated fiber service for our Jakarta office.', status: 'new' },
-    { id: crypto.randomBytes(12).toString('base64url'), name: 'Jane Smith', email: 'jane.smith@bca.co.id', phone: '+62 813-9876-5432', company: 'Bank Central Asia', subject: 'SD-WAN Solution for Multi-Branch', message: 'We need SD-WAN solution to connect 50+ branches across Indonesia.', status: 'read' },
-    { id: crypto.randomBytes(12).toString('base64url'), name: 'Ahmad Rahman', email: 'ahmad.rahman@pertamina.com', phone: '+62 821-5555-6666', company: 'PT. Pertamina', subject: 'Cloud Interconnection Services', message: 'Looking for direct connection to AWS and Azure for our enterprise applications.', status: 'responded' },
+    { id: crypto.randomBytes(12).toString('base64url'), name: 'John Doe', email: 'john.doe@telkom.co.id', phone: '+62 812-3456-7890', company: 'PT. Telkom Indonesia', subject: 'Inquiry about Dedicated Connectivity', message: 'We are interested in your 10 Gbps dedicated fiber service for our Jakarta office.', date: '2026-01-02 10:30', status: 'new' },
+    { id: crypto.randomBytes(12).toString('base64url'), name: 'Jane Smith', email: 'jane.smith@bca.co.id', phone: '+62 813-9876-5432', company: 'Bank Central Asia', subject: 'SD-WAN Solution for Multi-Branch', message: 'We need SD-WAN solution to connect 50+ branches across Indonesia.', date: '2026-01-02 09:15', status: 'read' },
+    { id: crypto.randomBytes(12).toString('base64url'), name: 'Ahmad Rahman', email: 'ahmad.rahman@pertamina.com', phone: '+62 821-5555-6666', company: 'PT. Pertamina', subject: 'Cloud Interconnection Services', message: 'Looking for direct connection to AWS and Azure for our enterprise applications.', date: '2026-01-01 16:45', status: 'responded' },
   ];
-  for (const msg of sampleMessages) {
-    await insertContactMessage(msg);
-  }
+  await setContentValue('contactMessages', sampleMessages);
   console.log('✅ Contact messages seeded');
 
   // 12. Seed Page Content - Solutions
