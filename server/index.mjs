@@ -57,6 +57,12 @@ const HR_EMAIL = (process.env.HR_EMAIL ?? 'hr@supercorridor.com').trim().toLower
 const HR_PASSWORD_HASH = process.env.HR_PASSWORD_HASH ?? null;
 const HR_PASSWORD = process.env.HR_PASSWORD ?? null;
 
+const SALES_EMAIL = (process.env.SALES_EMAIL ?? 'sales@supercorridor.com').trim().toLowerCase();
+const SALES_PASSWORD_HASH = process.env.SALES_PASSWORD_HASH ?? null;
+const SALES_PASSWORD = process.env.SALES_PASSWORD ?? null;
+
+const SOLUSI_ENTERPRISE_JWT_SECRET = process.env.SOLUSI_ENTERPRISE_JWT_SECRET ?? 'solusi-enterprise-shared-secret-2026';
+
 const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 
@@ -877,7 +883,7 @@ function signAccessToken(user) {
 function normalizeRole(rawRole) {
   const role = String(rawRole ?? '').trim().toLowerCase();
   if (role === 'admin') return 'super_admin';
-  if (role === 'super_admin' || role === 'content' || role === 'hr') return role;
+  if (role === 'super_admin' || role === 'content' || role === 'hr' || role === 'sales') return role;
   return null;
 }
 
@@ -995,9 +1001,10 @@ function requireAnyRole(allowedRoles) {
   };
 }
 
-const requireAdminAny = requireAnyRole(['super_admin', 'content', 'hr']);
+const requireAdminAny = requireAnyRole(['super_admin', 'content', 'hr', 'sales']);
 const requireContentAdmin = requireAnyRole(['super_admin', 'content']);
 const requireHrAdmin = requireAnyRole(['super_admin', 'hr']);
+const requireSalesAdmin = requireAnyRole(['super_admin', 'sales']);
 
 app.set('trust proxy', true);
 app.use(express.json({ limit: '1mb' }));
@@ -1094,6 +1101,16 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
         passwordHash: HR_PASSWORD_HASH,
         passwordPlain: HR_PASSWORD,
         devFallbackPassword: 'hr123',
+      },
+      {
+        id: '4',
+        email: SALES_EMAIL,
+        aliases: [SALES_EMAIL, 'sales@supercorridor.com', 'sales@supercorridor.co.id'],
+        name: 'Sales User',
+        role: 'sales',
+        passwordHash: SALES_PASSWORD_HASH,
+        passwordPlain: SALES_PASSWORD,
+        devFallbackPassword: 'sales123',
       },
     ];
 
@@ -1252,6 +1269,36 @@ app.get('/api/auth/me', (req, res) => {
     return res.json({ ok: true, user });
   } catch {
     return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
+  }
+});
+
+// SSO token endpoint for Solusi Enterprise
+// Issues a JWT that solusi-enterprise backend can validate
+app.post('/api/auth/solusi-token', requireAuth, requireSalesAdmin, (req, res) => {
+  try {
+    const user = req.auth;
+    const payload = {
+      sub: user.userId,
+      email: user.email,
+      role: 'sales',
+      tenantId: 'supercorridor',
+      name: user.name,
+      iss: 'supercorridor',
+    };
+    const accessToken = jwt.sign(payload, SOLUSI_ENTERPRISE_JWT_SECRET, { expiresIn: '15m' });
+    const refreshToken = jwt.sign(
+      { ...payload, type: 'refresh' },
+      SOLUSI_ENTERPRISE_JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    return res.json({
+      ok: true,
+      accessToken,
+      refreshToken,
+      user: { id: user.userId, name: user.name, email: user.email, role: 'sales' },
+    });
+  } catch {
+    return res.status(500).json({ ok: false, error: 'INTERNAL' });
   }
 });
 
@@ -1609,7 +1656,7 @@ app.post('/api/admin/users/create', requireAuth, requireSuperAdmin, async (req, 
   if (!email || !name || !role || !password) {
     return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
   }
-  if (!['super_admin', 'content', 'hr'].includes(role)) {
+  if (!['super_admin', 'content', 'hr', 'sales'].includes(role)) {
     return res.status(400).json({ ok: false, error: 'INVALID_ROLE' });
   }
   if (password.length < 6) {
@@ -1650,7 +1697,7 @@ app.post('/api/admin/users/update', requireAuth, requireSuperAdmin, async (req, 
   if (!id || !email || !name || !role) {
     return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
   }
-  if (!['super_admin', 'content', 'hr'].includes(role)) {
+  if (!['super_admin', 'content', 'hr', 'sales'].includes(role)) {
     return res.status(400).json({ ok: false, error: 'INVALID_ROLE' });
   }
 
@@ -2067,6 +2114,11 @@ app.get('/api/content/pages/:key', async (req, res) => {
   const data = await getPageContent(key);
   res.json({ ok: true, data });
 });
+
+// ── Enterprise API Routes ──────────────────────────────────────────
+import { createEnterpriseRouter } from './enterprise/routes.mjs';
+const enterpriseRouter = createEnterpriseRouter(requireAuth, requireSalesAdmin, getContentValue, setContentValue);
+app.use('/api/enterprise', enterpriseRouter);
 
 // Initialize database and start server
 initDatabase().then(() => {

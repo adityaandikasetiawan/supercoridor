@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AdminLayout } from '../../components/AdminLayout';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   Users,
   Briefcase,
@@ -9,10 +10,12 @@ import {
   TrendingUp,
   Network,
   Home,
+  Calculator,
 } from 'lucide-react';
 import { apiFetch } from '../../utils/storage';
 
 export function Dashboard() {
+  const { user } = useAuth();
   const [dashboardStats, setDashboardStats] = useState({
     totalMessages: 0,
     newMessages: 0,
@@ -104,6 +107,18 @@ export function Dashboard() {
       textClass: 'text-green-600',
     },
   ];
+
+  // Add Solusi Enterprise link for sales role
+  if (user?.role === 'sales' || user?.role === 'super_admin') {
+    quickActions.push({
+      title: 'Solusi Enterprise',
+      description: 'Pricing & Quotation System - Buat dan kelola penawaran harga',
+      icon: Calculator,
+      link: '/admin/solusi-enterprise',
+      bgClass: 'bg-purple-100',
+      textClass: 'text-purple-600',
+    });
+  }
 
   const recentActivity = dashboardStats.newMessages > 0 || dashboardStats.newApplications > 0
     ? [

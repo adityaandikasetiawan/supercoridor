@@ -16,6 +16,7 @@ const ALL_PERMISSIONS = [
   { key: 'customers', label: 'Customers', group: 'Content' },
   { key: 'contact', label: 'Contact Messages', group: 'Content' },
   { key: 'careers', label: 'Careers', group: 'HR' },
+  { key: 'enterprise', label: 'Solusi Enterprise', group: 'Sales' },
   { key: 'settings', label: 'Settings', group: 'General' },
   { key: 'users', label: 'User Management', group: 'Admin' },
 ] as const;
@@ -27,13 +28,14 @@ const ROLE_TEMPLATES: Record<string, PermissionKey[]> = {
   super_admin: ALL_PERMISSIONS.map((p) => p.key),
   content: ['dashboard', 'home', 'tgcs', 'solutions', 'technology', 'about', 'network', 'resources', 'customers', 'contact', 'settings'],
   hr: ['dashboard', 'careers', 'settings'],
+  sales: ['dashboard', 'enterprise', 'settings'],
 };
 
 interface AdminUser {
   id: string;
   email: string;
   name: string;
-  role: 'super_admin' | 'content' | 'hr';
+  role: 'super_admin' | 'content' | 'hr' | 'sales';
   permissions: PermissionKey[];
   active: boolean;
   createdAt: string;
@@ -43,12 +45,14 @@ const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Super Admin',
   content: 'Content Admin',
   hr: 'HR Admin',
+  sales: 'Sales',
 };
 
 const ROLE_COLORS: Record<string, string> = {
   super_admin: 'bg-red-100 text-red-700',
   content: 'bg-blue-100 text-blue-700',
   hr: 'bg-green-100 text-green-700',
+  sales: 'bg-purple-100 text-purple-700',
 };
 
 export function UserManagement() {
@@ -62,7 +66,7 @@ export function UserManagement() {
   const [formData, setFormData] = useState({
     email: '',
     name: '',
-    role: 'content' as 'super_admin' | 'content' | 'hr',
+    role: 'content' as 'super_admin' | 'content' | 'hr' | 'sales',
     password: '',
     active: true,
     permissions: ROLE_TEMPLATES.content as PermissionKey[],
@@ -111,7 +115,7 @@ export function UserManagement() {
     setIsModalOpen(true);
   };
 
-  const handleRoleChange = (role: 'super_admin' | 'content' | 'hr') => {
+  const handleRoleChange = (role: 'super_admin' | 'content' | 'hr' | 'sales') => {
     setFormData({
       ...formData,
       role,
@@ -301,10 +305,11 @@ export function UserManagement() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm text-gray-700 mb-1">Role Template *</label>
-                      <select value={formData.role} onChange={(e) => handleRoleChange(e.target.value as 'super_admin' | 'content' | 'hr')} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                      <select value={formData.role} onChange={(e) => handleRoleChange(e.target.value as 'super_admin' | 'content' | 'hr' | 'sales')} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
                         <option value="super_admin">Super Admin</option>
                         <option value="content">Content Admin</option>
                         <option value="hr">HR Admin</option>
+                        <option value="sales">Sales</option>
                       </select>
                       <p className="text-xs text-gray-500 mt-1">Changing role resets permissions to template defaults</p>
                     </div>

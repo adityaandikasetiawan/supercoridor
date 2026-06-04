@@ -19,6 +19,7 @@ import {
   Info,
   Layers,
   Cpu,
+  Calculator,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -37,6 +38,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const role = user?.role === 'admin' ? 'super_admin' : user?.role;
   const canManageContent = role === 'super_admin' || role === 'content';
   const canManageHr = role === 'super_admin' || role === 'hr';
+  const canAccessSales = role === 'super_admin' || role === 'sales';
 
   const handleLogout = () => {
     logout();
@@ -91,6 +93,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       : []),
     { path: '/admin/settings', icon: Settings, label: 'Settings' },
     ...(role === 'super_admin' ? [{ path: '/admin/users', icon: Users2, label: 'User Management' }] : []),
+    ...(canAccessSales ? [{ path: '/enterprise', icon: Calculator, label: 'Solusi Enterprise' }] : []),
   ];
 
   return (

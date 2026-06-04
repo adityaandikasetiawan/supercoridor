@@ -72,6 +72,13 @@ import { AdminNetworkCoverage } from './pages/admin/NetworkCoverage';
 // Admin TGCS
 import { AdminTGCSManagement } from './pages/admin/TGCSManagement';
 
+// Enterprise Pages
+import { EnterpriseDashboard } from './pages/enterprise/Dashboard';
+import { EnterpriseQuotation } from './pages/enterprise/Quotation';
+import { EnterpriseHistory } from './pages/enterprise/QuoteHistory';
+import { EnterpriseDevices } from './pages/enterprise/Devices';
+import { EnterpriseConfig } from './pages/enterprise/Config';
+
 // 404 Page
 import { NotFound } from './pages/NotFound';
 
@@ -353,10 +360,19 @@ export default function App() {
                         </RequireAdminRole>
                       }
                     />
+                    
+                    {/* Enterprise Routes handled at top level */}
                   </Routes>
                 </ProtectedRoute>
               }
             />
+
+            {/* Enterprise Routes */}
+            <Route path="/enterprise" element={<ProtectedRoute allowedRoles={['super_admin', 'sales']}><EnterpriseDashboard /></ProtectedRoute>} />
+            <Route path="/enterprise/quotation" element={<ProtectedRoute allowedRoles={['super_admin', 'sales']}><EnterpriseQuotation /></ProtectedRoute>} />
+            <Route path="/enterprise/history" element={<ProtectedRoute allowedRoles={['super_admin', 'sales']}><EnterpriseHistory /></ProtectedRoute>} />
+            <Route path="/enterprise/devices" element={<ProtectedRoute allowedRoles={['super_admin', 'sales']}><EnterpriseDevices /></ProtectedRoute>} />
+            <Route path="/enterprise/config" element={<ProtectedRoute allowedRoles={['super_admin', 'sales']}><EnterpriseConfig /></ProtectedRoute>} />
 
             {/* Public Routes */}
             <Route

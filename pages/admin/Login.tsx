@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Lock, Mail, AlertCircle } from 'lucide-react';
+import { apiFetch } from '../../utils/storage';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -20,6 +21,19 @@ export function Login() {
     try {
       const result = await login(email, password);
       if (result.ok) {
+        // Check if user is sales role — redirect to enterprise app
+        try {
+          const meRes = await apiFetch('/api/auth/me', { method: 'GET' });
+          if (meRes.ok) {
+            const meData = await meRes.json();
+            if (meData.user?.role === 'sales') {
+              navigate('/enterprise');
+              return;
+            }
+          }
+        } catch {
+          // fallback to admin dashboard
+        }
         navigate('/admin/dashboard');
       } else {
         if (result.error === 'LOCKED' && result.lockUntil) {
@@ -119,7 +133,11 @@ export function Login() {
               <br />
               <strong>HR</strong><br />
               <span>Email:</span> hr@supercorridor.com<br />
-              <span>Password:</span> hr123
+              <span>Password:</span> hr123<br />
+              <br />
+              <strong>Sales</strong> (akses Solusi Enterprise)<br />
+              <span>Email:</span> sales@supercorridor.com<br />
+              <span>Password:</span> sales123
             </p>
           </div>
         )}
