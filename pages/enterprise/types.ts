@@ -1,5 +1,5 @@
 export type Segmen = 'SME' | 'Enterprise';
-export type Skema = 'recurring' | 'otc';
+export type Skema = 'recurring' | 'otc' | 'otc_mrc';
 export type BudgetTier = 'All' | 'Low' | 'Medium' | 'High';
 export type QuoteStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
 export type SolutionKey = 'internet' | 'router' | 'sdwan' | 'firewall' | 'cctv' | 'wifi' | 'switch' | 'switch_l2' | 'server' | 'storage' | 'ippbx';
@@ -18,12 +18,22 @@ export interface Device {
   hargaBW: number;
   budgetTier: string;
   isActive: boolean;
+  // Cable-specific fields
+  tipeKabel?: string;       // FO, UTP, STP, Coaxial, dll
+  spesifikasi?: string;     // Single Mode, Multimode, Cat6, Cat7, dll
+  hargaPerMeter?: number;   // Harga per meter kabel
+  satuanPanjang?: string;   // meter / roll (default meter)
 }
 
 export interface QuoteParams {
   namaKlien: string;
   segmen: Segmen;
   region: string;
+  regionAsal: string;
+  regionTujuan: string;
+  kotaAsal: string;
+  kotaTujuan: string;
+  services: string;
   jumlahUser: number;
   bandwidthTarget: number;
   durasiKontrak: number;
@@ -31,8 +41,7 @@ export interface QuoteParams {
   jarakKabel: number;
   jarakKota: number;
   hariKerja: number;
-  jumlahKunjungan: number;
-  jumlahMeeting: number;
+  operasionalPct: number;   // % of HW cost for perjalanan + operasional (from config, editable)
   selectedSolusi: SolutionKey[];
   targetMargin: number;
   komisi: number;
@@ -42,6 +51,7 @@ export interface QuoteParams {
   provisiRate: number;
   budgetTierFilter: BudgetTier;
   qtyMap: Record<string, number>;
+  deviceMap: Record<string, string>;  // kategori -> device name (selected device per solution)
   wifiConfig: { mode: 'standalone' | 'wlc'; wlcModel?: string; wlcQty?: number; wlcHarga?: number; wlcBrand?: string };
   cctvConfig: { type: 'nvr' | 'dvr'; recQty: number; camQty: number };
   ippbxConfig: { pbxQty: number; phoneQty: number };
@@ -54,6 +64,8 @@ export interface Recommendation {
   skema: Skema;
   hargaNet: number;
   hargaNetBulan: number;
+  hargaOTC: number;
+  hargaMRC: number;
   totalRev: number;
   totalCost: number;
   margin: number;
@@ -84,3 +96,28 @@ export const SOLUTION_LABELS: Record<SolutionKey, string> = {
 };
 
 export const REGIONS = ['JABOTABEK', 'BANTEN', 'JABAR', 'JATENG', 'JATIM', 'KALIMANTAN', 'SULAWESI', 'BALI'];
+
+export interface PackageItem {
+  nama: string;
+  brand: string;
+  qty: number;
+  keterangan?: string;
+}
+
+export interface EnterprisePackage {
+  id: string;
+  nama: string;
+  deskripsi: string;
+  segmen: Segmen;
+  budgetTier: string;
+  skema: Skema;
+  durasiKontrak: number;
+  hargaBulan: number | null;
+  hargaOTC: number | null;
+  perangkat: PackageItem[];
+  fitur: string[];
+  services: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}

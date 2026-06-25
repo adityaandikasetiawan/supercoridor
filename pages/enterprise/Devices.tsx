@@ -2,15 +2,46 @@ import { useEffect, useState } from 'react';
 import { EnterpriseLayout } from './EnterpriseLayout';
 import { enterpriseApi } from './api';
 import { Device } from './types';
-import { Plus, Edit, Trash2, RotateCcw, Search, Save, Tag } from 'lucide-react';
+import { Plus, Edit, Trash2, RotateCcw, Search, Save, Tag, Cable } from 'lucide-react';
 
 const rp = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
+
+const TIPE_KABEL = ['Fiber Optic', 'UTP', 'STP', 'FTP', 'Coaxial', 'Patch Cord', 'Pigtail', 'Keystone'];
+const SPEK_KABEL = ['Single Mode', 'Multimode OM3', 'Multimode OM4', 'Cat5e', 'Cat6', 'Cat6A', 'Cat7', 'RG6', 'RG11', 'RG58'];
+const SATUAN_PANJANG = ['meter', 'roll 100m', 'roll 200m', 'roll 500m'];
 
 interface Category {
   id: string;
   label: string;
   icon: string;
 }
+
+// Blank forms per type
+const blankDeviceForm = {
+  kategori: 'internet' as string,
+  segmen: 'SME' as 'SME' | 'Enterprise',
+  nama: '',
+  brand: '',
+  userMin: 10,
+  userMax: 100,
+  bwMin: 0,
+  bwMax: 0,
+  hargaHW: 0,
+  hargaBW: 0,
+  budgetTier: 'Low' as string,
+};
+
+const blankCableForm = {
+  kategori: 'kabel' as string,
+  segmen: 'SME' as 'SME' | 'Enterprise',
+  nama: '',
+  brand: '',
+  tipeKabel: 'Fiber Optic',
+  spesifikasi: 'Single Mode',
+  hargaPerMeter: 0,
+  satuanPanjang: 'meter',
+  budgetTier: 'Low' as string,
+};
 
 export function EnterpriseDevices() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -26,19 +57,9 @@ export function EnterpriseDevices() {
   const [catForm, setCatForm] = useState({ id: '', label: '', icon: '' });
   const [editingCat, setEditingCat] = useState<Category | null>(null);
 
-  const [form, setForm] = useState({
-    kategori: 'internet' as string,
-    segmen: 'SME' as 'SME' | 'Enterprise',
-    nama: '',
-    brand: '',
-    userMin: 10,
-    userMax: 100,
-    bwMin: 0,
-    bwMax: 0,
-    hargaHW: 0,
-    hargaBW: 0,
-    budgetTier: 'Low' as string,
-  });
+  const [form, setForm] = useState<typeof blankDeviceForm>(blankDeviceForm);
+  const [cableForm, setCableForm] = useState<typeof blankCableForm>(blankCableForm);
+  const [isKabel, setIsKabel] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -85,35 +106,67 @@ export function EnterpriseDevices() {
     setError('');
     if (device) {
       setEditingDevice(device);
-      setForm({
-        kategori: device.kategori,
-        segmen: device.segmen,
-        nama: device.nama,
-        brand: device.brand,
-        userMin: device.userMin,
-        userMax: device.userMax,
-        bwMin: device.bwMin ?? 0,
-        bwMax: device.bwMax ?? 0,
-        hargaHW: device.hargaHW,
-        hargaBW: device.hargaBW,
-        budgetTier: device.budgetTier,
-      });
+      const isCable = device.kategori === 'kabel';
+      setIsKabel(isCable);
+      if (isCable) {
+        setCableForm({
+          kategori: device.kategori,
+          segmen: device.segmen,
+          nama: device.nama,
+          brand: device.brand,
+          tipeKabel: device.tipeKabel ?? 'Fiber Optic',
+          spesifikasi: device.spesifikasi ?? 'Single Mode',
+          hargaPerMeter: device.hargaPerMeter ?? 0,
+          satuanPanjang: device.satuanPanjang ?? 'meter',
+          budgetTier: device.budgetTier,
+        });
+      } else {
+        setForm({
+          kategori: device.kategori,
+          segmen: device.segmen,
+          nama: device.nama,
+          brand: device.brand,
+          userMin: device.userMin,
+          userMax: device.userMax,
+          bwMin: device.bwMin ?? 0,
+          bwMax: device.bwMax ?? 0,
+          hargaHW: device.hargaHW,
+          hargaBW: device.hargaBW,
+          budgetTier: device.budgetTier,
+        });
+      }
     } else {
       setEditingDevice(null);
-      setForm({ kategori: 'internet', segmen: 'SME', nama: '', brand: '', userMin: 10, userMax: 100, bwMin: 0, bwMax: 0, hargaHW: 0, hargaBW: 0, budgetTier: 'Low' });
+      setIsKabel(false);
+      setForm(blankDeviceForm);
+      setCableForm(blankCableForm);
     }
     setIsModalOpen(true);
   };
 
+  // When kategori changes in device form, switch to cable form if needed
+  const handleKategoriChange = (val: string) => {
+    const cable = val === 'kabel';
+    setIsKabel(cable);
+    if (cable) {
+      setCableForm(prev => ({ ...prev, kategori: val }));
+    } else {
+      setForm(prev => ({ ...prev, kategori: val }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nama || !form.brand) { setError('Nama dan Brand wajib diisi'); return; }
+    const payload = isKabel
+      ? { ...cableForm, hargaHW: 0, hargaBW: 0, userMin: 0, userMax: 9999 }
+      : form;
+    if (!payload.nama || !payload.brand) { setError('Nama dan Brand wajib diisi'); return; }
     try {
       if (editingDevice) {
-        await enterpriseApi.devices.update(editingDevice.id, form);
+        await enterpriseApi.devices.update(editingDevice.id, payload);
         setSuccess('Device updated');
       } else {
-        await enterpriseApi.devices.create(form);
+        await enterpriseApi.devices.create(payload);
         setSuccess('Device created');
       }
       setTimeout(() => setSuccess(''), 3000);
@@ -162,6 +215,9 @@ export function EnterpriseDevices() {
 
   const getCatLabel = (id: string) => categories.find(c => c.id === id)?.label ?? id;
 
+  // Active kategori from form (device or cable)
+  const activeKategori = isKabel ? cableForm.kategori : form.kategori;
+
   return (
     <EnterpriseLayout>
       <div className="space-y-6">
@@ -196,8 +252,9 @@ export function EnterpriseDevices() {
           </div>
           <div className="flex flex-wrap gap-2">
             {categories.map(cat => (
-              <div key={cat.id} className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 rounded-full text-sm group">
-                <span className="text-gray-700">{cat.label}</span>
+              <div key={cat.id} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm group ${cat.id === 'kabel' ? 'bg-amber-100' : 'bg-gray-100'}`}>
+                {cat.id === 'kabel' && <Cable className="w-3.5 h-3.5 text-amber-600" />}
+                <span className={cat.id === 'kabel' ? 'text-amber-700' : 'text-gray-700'}>{cat.label}</span>
                 <button onClick={() => handleOpenCatModal(cat)} className="text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"><Edit className="w-3 h-3" /></button>
                 <button onClick={() => handleDeleteCat(cat.id)} className="text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-3 h-3" /></button>
               </div>
@@ -213,31 +270,45 @@ export function EnterpriseDevices() {
               <th className="px-3 py-2 text-left text-xs text-gray-500">Nama</th>
               <th className="px-3 py-2 text-left text-xs text-gray-500">Brand</th>
               <th className="px-3 py-2 text-left text-xs text-gray-500">Segmen</th>
-              <th className="px-3 py-2 text-right text-xs text-gray-500">Harga HW</th>
-              <th className="px-3 py-2 text-right text-xs text-gray-500">Harga BW</th>
-              <th className="px-3 py-2 text-center text-xs text-gray-500">Users</th>
+              <th className="px-3 py-2 text-right text-xs text-gray-500">Harga</th>
+              <th className="px-3 py-2 text-center text-xs text-gray-500">Spesifikasi</th>
               <th className="px-3 py-2 text-center text-xs text-gray-500">Tier</th>
               <th className="px-3 py-2 text-center text-xs text-gray-500">Actions</th>
             </tr></thead>
             <tbody className="divide-y">
-              {devices.map(d => (
-                <tr key={d.id} className="hover:bg-gray-50">
-                  <td className="px-3 py-2 text-gray-600">{getCatLabel(d.kategori)}</td>
-                  <td className="px-3 py-2 text-gray-900 font-medium">{d.nama}</td>
-                  <td className="px-3 py-2 text-gray-600">{d.brand}</td>
-                  <td className="px-3 py-2"><span className={`text-xs px-2 py-0.5 rounded ${d.segmen === 'Enterprise' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>{d.segmen}</span></td>
-                  <td className="px-3 py-2 text-right text-gray-900">{d.hargaHW ? rp(d.hargaHW) : '-'}</td>
-                  <td className="px-3 py-2 text-right text-gray-900">{d.hargaBW ? rp(d.hargaBW) : '-'}</td>
-                  <td className="px-3 py-2 text-center text-gray-600">{d.userMin}-{d.userMax}</td>
-                  <td className="px-3 py-2 text-center"><span className={`text-xs px-1.5 py-0.5 rounded ${d.budgetTier === 'High' ? 'bg-red-100 text-red-700' : d.budgetTier === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{d.budgetTier}</span></td>
-                  <td className="px-3 py-2 text-center">
-                    <div className="flex justify-center gap-1">
-                      <button onClick={() => handleOpenModal(d)} className="p-1 text-blue-600 hover:text-blue-700"><Edit className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => handleDelete(d.id)} className="p-1 text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {devices.map(d => {
+                const isDeviceKabel = d.kategori === 'kabel';
+                return (
+                  <tr key={d.id} className={`hover:bg-gray-50 ${isDeviceKabel ? 'bg-amber-50/30' : ''}`}>
+                    <td className="px-3 py-2">
+                      <span className={`flex items-center gap-1 ${isDeviceKabel ? 'text-amber-700' : 'text-gray-600'}`}>
+                        {isDeviceKabel && <Cable className="w-3.5 h-3.5" />}
+                        {getCatLabel(d.kategori)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-gray-900 font-medium">{d.nama}</td>
+                    <td className="px-3 py-2 text-gray-600">{d.brand}</td>
+                    <td className="px-3 py-2"><span className={`text-xs px-2 py-0.5 rounded ${d.segmen === 'Enterprise' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>{d.segmen}</span></td>
+                    <td className="px-3 py-2 text-right text-gray-900">
+                      {isDeviceKabel
+                        ? (d.hargaPerMeter ? <span>{rp(d.hargaPerMeter)}<span className="text-xs text-gray-400">/{d.satuanPanjang ?? 'm'}</span></span> : '-')
+                        : (d.hargaHW ? rp(d.hargaHW) : '-')}
+                    </td>
+                    <td className="px-3 py-2 text-center text-gray-500 text-xs">
+                      {isDeviceKabel
+                        ? <span>{d.tipeKabel} {d.spesifikasi ? `· ${d.spesifikasi}` : ''}</span>
+                        : <span>{d.userMin}-{d.userMax} users</span>}
+                    </td>
+                    <td className="px-3 py-2 text-center"><span className={`text-xs px-1.5 py-0.5 rounded ${d.budgetTier === 'High' ? 'bg-red-100 text-red-700' : d.budgetTier === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{d.budgetTier}</span></td>
+                    <td className="px-3 py-2 text-center">
+                      <div className="flex justify-center gap-1">
+                        <button onClick={() => handleOpenModal(d)} className="p-1 text-blue-600 hover:text-blue-700"><Edit className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => handleDelete(d.id)} className="p-1 text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           {loading && <p className="p-4 text-center text-gray-500">Loading...</p>}
@@ -251,69 +322,165 @@ export function EnterpriseDevices() {
               <div className="p-6">
                 <h2 className="text-xl text-gray-900 mb-4">{editingDevice ? 'Edit Device' : 'Add New Device'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
+
+                  {/* Kategori selector — always visible */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm text-gray-700 mb-1">Kategori *</label>
-                      <select value={form.kategori} onChange={e => setForm({...form, kategori: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm">
+                      <select
+                        value={activeKategori}
+                        onChange={e => handleKategoriChange(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                      >
                         {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="block text-sm text-gray-700 mb-1">Segmen *</label>
-                      <select value={form.segmen} onChange={e => setForm({...form, segmen: e.target.value as 'SME'|'Enterprise'})} className="w-full px-3 py-2 border rounded-lg text-sm">
+                      <select
+                        value={isKabel ? cableForm.segmen : form.segmen}
+                        onChange={e => isKabel
+                          ? setCableForm({...cableForm, segmen: e.target.value as 'SME'|'Enterprise'})
+                          : setForm({...form, segmen: e.target.value as 'SME'|'Enterprise'})}
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                      >
                         <option>SME</option><option>Enterprise</option>
                       </select>
                     </div>
                   </div>
+
+                  {/* Common fields */}
                   <div>
-                    <label className="block text-sm text-gray-700 mb-1">Nama Device *</label>
-                    <input value={form.nama} onChange={e => setForm({...form, nama: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. Fortinet FortiGate 60F" required />
+                    <label className="block text-sm text-gray-700 mb-1">Nama {isKabel ? 'Kabel' : 'Device'} *</label>
+                    <input
+                      value={isKabel ? cableForm.nama : form.nama}
+                      onChange={e => isKabel ? setCableForm({...cableForm, nama: e.target.value}) : setForm({...form, nama: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                      placeholder={isKabel ? 'e.g. FO Single Mode 9/125' : 'e.g. Fortinet FortiGate 60F'}
+                      required
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm text-gray-700 mb-1">Brand *</label>
-                      <input value={form.brand} onChange={e => setForm({...form, brand: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. Fortinet" required />
+                      <input
+                        value={isKabel ? cableForm.brand : form.brand}
+                        onChange={e => isKabel ? setCableForm({...cableForm, brand: e.target.value}) : setForm({...form, brand: e.target.value})}
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                        placeholder={isKabel ? 'e.g. Corning, Belden' : 'e.g. Fortinet'}
+                        required
+                      />
                     </div>
                     <div>
                       <label className="block text-sm text-gray-700 mb-1">Budget Tier</label>
-                      <select value={form.budgetTier} onChange={e => setForm({...form, budgetTier: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm">
+                      <select
+                        value={isKabel ? cableForm.budgetTier : form.budgetTier}
+                        onChange={e => isKabel ? setCableForm({...cableForm, budgetTier: e.target.value}) : setForm({...form, budgetTier: e.target.value})}
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                      >
                         <option>Low</option><option>Medium</option><option>High</option>
                       </select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm text-gray-700 mb-1">User Min</label>
-                      <input type="number" value={form.userMin} onChange={e => setForm({...form, userMin: +e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+
+                  {/* ── Cable-specific fields ── */}
+                  {isKabel && (
+                    <div className="border-t pt-4 space-y-4">
+                      <p className="text-sm font-medium text-amber-700 flex items-center gap-1.5">
+                        <Cable className="w-4 h-4" /> Spesifikasi Kabel
+                      </p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-1">Tipe Kabel</label>
+                          <select value={cableForm.tipeKabel} onChange={e => setCableForm({...cableForm, tipeKabel: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm">
+                            {TIPE_KABEL.map(t => <option key={t}>{t}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-1">Spesifikasi</label>
+                          <div className="flex gap-2">
+                            <select value={cableForm.spesifikasi} onChange={e => setCableForm({...cableForm, spesifikasi: e.target.value})} className="flex-1 px-3 py-2 border rounded-lg text-sm">
+                              {SPEK_KABEL.map(s => <option key={s}>{s}</option>)}
+                            </select>
+                          </div>
+                          <input
+                            type="text"
+                            value={cableForm.spesifikasi}
+                            onChange={e => setCableForm({...cableForm, spesifikasi: e.target.value})}
+                            className="w-full mt-1 px-3 py-1.5 border rounded-lg text-sm text-gray-500"
+                            placeholder="atau ketik manual..."
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-1">Harga per Satuan (Rp)</label>
+                          <input
+                            type="number"
+                            value={cableForm.hargaPerMeter}
+                            onChange={e => setCableForm({...cableForm, hargaPerMeter: +e.target.value})}
+                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                            placeholder="15000"
+                          />
+                          {cableForm.hargaPerMeter > 0 && (
+                            <p className="text-xs text-gray-500 mt-0.5">{rp(cableForm.hargaPerMeter)}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-1">Satuan Panjang</label>
+                          <select value={cableForm.satuanPanjang} onChange={e => setCableForm({...cableForm, satuanPanjang: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm">
+                            {SATUAN_PANJANG.map(s => <option key={s}>{s}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+                        Harga kabel akan digunakan dalam kalkulasi biaya teknis berdasarkan jarak kabel (meter) yang diinput di quotation.
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm text-gray-700 mb-1">User Max</label>
-                      <input type="number" value={form.userMax} onChange={e => setForm({...form, userMax: +e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  )}
+
+                  {/* ── Device-specific fields ── */}
+                  {!isKabel && (
+                    <div className="border-t pt-4 space-y-4">
+                      <p className="text-sm font-medium text-gray-600">Spesifikasi Device</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-1">User Min</label>
+                          <input type="number" value={form.userMin} onChange={e => setForm({...form, userMin: +e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-1">User Max</label>
+                          <input type="number" value={form.userMax} onChange={e => setForm({...form, userMax: +e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-1">BW Min (Mbps)</label>
+                          <input type="number" value={form.bwMin} onChange={e => setForm({...form, bwMin: +e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-1">BW Max (Mbps)</label>
+                          <input type="number" value={form.bwMax} onChange={e => setForm({...form, bwMax: +e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-1">Harga Hardware (Rp)</label>
+                          <input type="number" value={form.hargaHW} onChange={e => setForm({...form, hargaHW: +e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                          {form.hargaHW > 0 && <p className="text-xs text-gray-500 mt-0.5">{rp(form.hargaHW)}</p>}
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-1">Harga Bandwidth (Rp/bln)</label>
+                          <input type="number" value={form.hargaBW} onChange={e => setForm({...form, hargaBW: +e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                          {form.hargaBW > 0 && <p className="text-xs text-gray-500 mt-0.5">{rp(form.hargaBW)}</p>}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm text-gray-700 mb-1">BW Min (Mbps)</label>
-                      <input type="number" value={form.bwMin} onChange={e => setForm({...form, bwMin: +e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-700 mb-1">BW Max (Mbps)</label>
-                      <input type="number" value={form.bwMax} onChange={e => setForm({...form, bwMax: +e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm text-gray-700 mb-1">Harga Hardware (Rp)</label>
-                      <input type="number" value={form.hargaHW} onChange={e => setForm({...form, hargaHW: +e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-700 mb-1">Harga Bandwidth (Rp/bln)</label>
-                      <input type="number" value={form.hargaBW} onChange={e => setForm({...form, hargaBW: +e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
-                    </div>
-                  </div>
+                  )}
+
                   <div className="flex gap-3 pt-4">
                     <button type="submit" className="flex-1 flex items-center justify-center gap-2 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 text-sm">
-                      <Save className="w-4 h-4" /> {editingDevice ? 'Update' : 'Create'} Device
+                      <Save className="w-4 h-4" /> {editingDevice ? 'Update' : 'Create'} {isKabel ? 'Kabel' : 'Device'}
                     </button>
                     <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 text-sm">Cancel</button>
                   </div>
@@ -332,17 +499,17 @@ export function EnterpriseDevices() {
                 <form onSubmit={handleSaveCat} className="space-y-4">
                   <div>
                     <label className="block text-sm text-gray-700 mb-1">Category ID {!editingCat && '*'}</label>
-                    <input value={catForm.id} onChange={e => setCatForm({...catForm, id: e.target.value})} disabled={!!editingCat} className="w-full px-3 py-2 border rounded-lg text-sm disabled:bg-gray-100" placeholder="e.g. ups, rack, cable" required={!editingCat} />
-                    {!editingCat && <p className="text-xs text-gray-500 mt-1">Lowercase, no spaces (used as internal key)</p>}
+                    <input value={catForm.id} onChange={e => setCatForm({...catForm, id: e.target.value})} disabled={!!editingCat} className="w-full px-3 py-2 border rounded-lg text-sm disabled:bg-gray-100" placeholder="e.g. kabel, ups, rack" required={!editingCat} />
+                    {!editingCat && <p className="text-xs text-gray-500 mt-1">Lowercase, no spaces. Gunakan "kabel" untuk kategori kabel otomatis</p>}
                   </div>
                   <div>
                     <label className="block text-sm text-gray-700 mb-1">Label *</label>
-                    <input value={catForm.label} onChange={e => setCatForm({...catForm, label: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. UPS, Rack, Cable" required />
+                    <input value={catForm.label} onChange={e => setCatForm({...catForm, label: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. Kabel, UPS, Rack" required />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-700 mb-1">Icon (upload gambar atau nama Lucide icon)</label>
+                    <label className="block text-sm text-gray-700 mb-1">Icon (nama Lucide icon atau upload gambar)</label>
                     <div className="space-y-2">
-                      <input value={catForm.icon} onChange={e => setCatForm({...catForm, icon: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. Battery, Box, atau upload gambar" />
+                      <input value={catForm.icon} onChange={e => setCatForm({...catForm, icon: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. Cable, Battery, Box" />
                       <div className="flex items-center gap-2">
                         <input type="file" accept="image/*" className="text-xs" onChange={async (e) => {
                           const file = e.target.files?.[0];

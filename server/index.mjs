@@ -883,7 +883,7 @@ function signAccessToken(user) {
 function normalizeRole(rawRole) {
   const role = String(rawRole ?? '').trim().toLowerCase();
   if (role === 'admin') return 'super_admin';
-  if (role === 'super_admin' || role === 'content' || role === 'hr' || role === 'sales') return role;
+  if (role === 'super_admin' || role === 'content' || role === 'hr' || role === 'sales' || role === 'sales_admin') return role;
   return null;
 }
 
@@ -1001,10 +1001,11 @@ function requireAnyRole(allowedRoles) {
   };
 }
 
-const requireAdminAny = requireAnyRole(['super_admin', 'content', 'hr', 'sales']);
+const requireAdminAny = requireAnyRole(['super_admin', 'content', 'hr', 'sales', 'sales_admin']);
 const requireContentAdmin = requireAnyRole(['super_admin', 'content']);
 const requireHrAdmin = requireAnyRole(['super_admin', 'hr']);
-const requireSalesAdmin = requireAnyRole(['super_admin', 'sales']);
+const requireSalesAdmin = requireAnyRole(['super_admin', 'sales_admin']);
+const requireSalesAny = requireAnyRole(['super_admin', 'sales_admin', 'sales']);
 
 app.set('trust proxy', true);
 app.use(express.json({ limit: '1mb' }));
@@ -1143,6 +1144,11 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
 
     const user = { id: account.id, email: account.email, name: account.name, role: account.role };
 
+    // Load permissions for this user
+    const adminUsers = (await getContentValue('adminUsers')) ?? [];
+    const dbUser = adminUsers.find(u => u.id === account.id || u.email === account.email);
+    if (dbUser?.permissions) user.permissions = dbUser.permissions;
+
     const accessToken = signAccessToken(user);
     const refreshJti = crypto.randomUUID();
     const refreshToken = signRefreshToken(user, refreshJti);
@@ -1250,7 +1256,7 @@ app.post('/api/auth/refresh', refreshLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/auth/me', (req, res) => {
+app.get('/api/auth/me', async (req, res) => {
   try {
     const token = req.cookies?.access_token;
     if (!token) return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
@@ -1260,11 +1266,19 @@ app.get('/api/auth/me', (req, res) => {
     const role = normalizeRole(payload.role);
     if (!role) return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
 
+    const userId = payload.sub ?? '1';
+
+    // Load permissions from user database
+    const adminUsers = (await getContentValue('adminUsers')) ?? [];
+    const dbUser = adminUsers.find(u => u.id === userId || u.email === (payload.email ?? ''));
+    const permissions = dbUser?.permissions ?? null;
+
     const user = {
-      id: payload.sub ?? '1',
+      id: userId,
       email: payload.email ?? SUPER_ADMIN_EMAIL,
       name: payload.name ?? 'Admin User',
       role,
+      ...(permissions ? { permissions } : {}),
     };
     return res.json({ ok: true, user });
   } catch {
@@ -1274,7 +1288,7 @@ app.get('/api/auth/me', (req, res) => {
 
 // SSO token endpoint for Solusi Enterprise
 // Issues a JWT that solusi-enterprise backend can validate
-app.post('/api/auth/solusi-token', requireAuth, requireSalesAdmin, (req, res) => {
+app.post('/api/auth/solusi-token', requireAuth, requireSalesAny, (req, res) => {
   try {
     const user = req.auth;
     const payload = {
@@ -1656,7 +1670,7 @@ app.post('/api/admin/users/create', requireAuth, requireSuperAdmin, async (req, 
   if (!email || !name || !role || !password) {
     return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
   }
-  if (!['super_admin', 'content', 'hr', 'sales'].includes(role)) {
+  if (!['super_admin', 'content', 'hr', 'sales', 'sales_admin'].includes(role)) {
     return res.status(400).json({ ok: false, error: 'INVALID_ROLE' });
   }
   if (password.length < 6) {
@@ -1697,7 +1711,7 @@ app.post('/api/admin/users/update', requireAuth, requireSuperAdmin, async (req, 
   if (!id || !email || !name || !role) {
     return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
   }
-  if (!['super_admin', 'content', 'hr', 'sales'].includes(role)) {
+  if (!['super_admin', 'content', 'hr', 'sales', 'sales_admin'].includes(role)) {
     return res.status(400).json({ ok: false, error: 'INVALID_ROLE' });
   }
 
@@ -2117,7 +2131,7 @@ app.get('/api/content/pages/:key', async (req, res) => {
 
 // ── Enterprise API Routes ──────────────────────────────────────────
 import { createEnterpriseRouter } from './enterprise/routes.mjs';
-const enterpriseRouter = createEnterpriseRouter(requireAuth, requireSalesAdmin, getContentValue, setContentValue);
+const enterpriseRouter = createEnterpriseRouter(requireAuth, requireSalesAdmin, requireSalesAny, getContentValue, setContentValue);
 app.use('/api/enterprise', enterpriseRouter);
 
 // Initialize database and start server

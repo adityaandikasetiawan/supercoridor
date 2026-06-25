@@ -36,9 +36,21 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const role = user?.role === 'admin' ? 'super_admin' : user?.role;
-  const canManageContent = role === 'super_admin' || role === 'content';
-  const canManageHr = role === 'super_admin' || role === 'hr';
-  const canAccessSales = role === 'super_admin' || role === 'sales';
+
+  // Use permissions if available, otherwise derive from role (backward compat)
+  const hasPermission = (perm: string): boolean => {
+    if (user?.permissions && user.permissions.length > 0) {
+      return user.permissions.includes(perm);
+    }
+    // Fallback: derive from role if no permissions stored
+    const rolePerms: Record<string, string[]> = {
+      super_admin: ['dashboard','home','tgcs','solutions','technology','about','network','resources','customers','contact','careers','enterprise','settings','users'],
+      content: ['dashboard','home','tgcs','solutions','technology','about','network','resources','customers','contact','settings'],
+      hr: ['dashboard','careers','settings'],
+      sales: ['dashboard','enterprise','settings'],
+    };
+    return (rolePerms[role ?? ''] ?? []).includes(perm);
+  };
 
   const handleLogout = () => {
     logout();
@@ -48,52 +60,44 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const isActive = (path: string) => location.pathname === path;
 
   const menuItems = [
-    { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    ...(canManageContent
-      ? [
-          { path: '/admin/home', icon: Home, label: 'Home Page' },
-          { path: '/admin/tgcs-management', icon: Layers, label: 'TGCS Project' },
-          { path: '/admin/solutions', icon: Network, label: 'Solutions' },
-          { path: '/admin/technology', icon: Cpu, label: 'Technology' },
-          {
-            label: 'About Us',
-            icon: Info,
-            submenu: [
-              { path: '/admin/about/company-overview', label: 'Company Overview' },
-              { path: '/admin/about/vision-mission', label: 'Vision & Mission' },
-              { path: '/admin/about/leadership', label: 'Leadership' },
-              { path: '/admin/about/milestones', label: 'Milestones' },
-            ],
-          },
-          { path: '/admin/network-coverage', icon: Globe, label: 'Network & Coverage' },
-          {
-            label: 'Resources',
-            icon: FileText,
-            submenu: [
-              { path: '/admin/resources/insights', label: 'Insights / Articles' },
-              { path: '/admin/resources/case-studies', label: 'Case Studies' },
-              { path: '/admin/resources/faq', label: 'FAQ' },
-            ],
-          },
-          { path: '/admin/customers', icon: Users, label: 'Customers' },
-          { path: '/admin/contact', icon: Mail, label: 'Contact Messages' },
-        ]
-      : []),
-    ...(canManageHr
-      ? [
-          {
-            label: 'Careers',
-            icon: Briefcase,
-            submenu: [
-              { path: '/admin/careers/jobs', label: 'Job Posts' },
-              { path: '/admin/careers/applications', label: 'Applications' },
-            ],
-          },
-        ]
-      : []),
-    { path: '/admin/settings', icon: Settings, label: 'Settings' },
-    ...(role === 'super_admin' ? [{ path: '/admin/users', icon: Users2, label: 'User Management' }] : []),
-    ...(canAccessSales ? [{ path: '/enterprise', icon: Calculator, label: 'Solusi Enterprise' }] : []),
+    ...(hasPermission('dashboard') ? [{ path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' }] : []),
+    ...(hasPermission('home') ? [{ path: '/admin/home', icon: Home, label: 'Home Page' }] : []),
+    ...(hasPermission('tgcs') ? [{ path: '/admin/tgcs-management', icon: Layers, label: 'TGCS Project' }] : []),
+    ...(hasPermission('solutions') ? [{ path: '/admin/solutions', icon: Network, label: 'Solutions' }] : []),
+    ...(hasPermission('technology') ? [{ path: '/admin/technology', icon: Cpu, label: 'Technology' }] : []),
+    ...(hasPermission('about') ? [{
+      label: 'About Us',
+      icon: Info,
+      submenu: [
+        { path: '/admin/about/company-overview', label: 'Company Overview' },
+        { path: '/admin/about/vision-mission', label: 'Vision & Mission' },
+        { path: '/admin/about/leadership', label: 'Leadership' },
+        { path: '/admin/about/milestones', label: 'Milestones' },
+      ],
+    }] : []),
+    ...(hasPermission('network') ? [{ path: '/admin/network-coverage', icon: Globe, label: 'Network & Coverage' }] : []),
+    ...(hasPermission('resources') ? [{
+      label: 'Resources',
+      icon: FileText,
+      submenu: [
+        { path: '/admin/resources/insights', label: 'Insights / Articles' },
+        { path: '/admin/resources/case-studies', label: 'Case Studies' },
+        { path: '/admin/resources/faq', label: 'FAQ' },
+      ],
+    }] : []),
+    ...(hasPermission('customers') ? [{ path: '/admin/customers', icon: Users, label: 'Customers' }] : []),
+    ...(hasPermission('contact') ? [{ path: '/admin/contact', icon: Mail, label: 'Contact Messages' }] : []),
+    ...(hasPermission('careers') ? [{
+      label: 'Careers',
+      icon: Briefcase,
+      submenu: [
+        { path: '/admin/careers/jobs', label: 'Job Posts' },
+        { path: '/admin/careers/applications', label: 'Applications' },
+      ],
+    }] : []),
+    ...(hasPermission('enterprise') ? [{ path: '/enterprise', icon: Calculator, label: 'Solusi Enterprise' }] : []),
+    ...(hasPermission('settings') ? [{ path: '/admin/settings', icon: Settings, label: 'Settings' }] : []),
+    ...(hasPermission('users') ? [{ path: '/admin/users', icon: Users2, label: 'User Management' }] : []),
   ];
 
   return (

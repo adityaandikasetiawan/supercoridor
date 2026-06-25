@@ -277,10 +277,8 @@ async function seed() {
 
   await setPageContent('about-leadership', {
     teamMembers: [
-      { id: '1', name: 'John Santoso', position: 'Chief Executive Officer', bio: 'John has over 20 years of experience in the telecommunications industry, leading SuperCorridor to become a market leader.', image: 'https://i.pravatar.cc/300?img=12', linkedin: '' },
-      { id: '2', name: 'Sarah Wijaya', position: 'Chief Technology Officer', bio: 'Sarah leads our technology vision with expertise in network architecture and cloud infrastructure.', image: 'https://i.pravatar.cc/300?img=47', linkedin: '' },
-      { id: '3', name: 'Michael Tan', position: 'Chief Operating Officer', bio: 'Michael ensures operational excellence across all service delivery and customer engagements.', image: 'https://i.pravatar.cc/300?img=33', linkedin: '' },
-      { id: '4', name: 'Lisa Hartono', position: 'Chief Financial Officer', bio: 'Lisa manages financial strategy and drives sustainable growth for the organization.', image: 'https://i.pravatar.cc/300?img=26', linkedin: '' },
+      { id: '1', name: 'John Santoso', position: 'Chief Executive Officer', bio: 'John has over 20 years of experience in the telecommunications industry, leading SuperCorridor to become a market leader.', image: 'https://i.pravatar.cc/300?img=12', linkedin: 'https://linkedin.com/in/johnsantoso', email: 'john@supercorridor.com', twitter: '', instagram: '' },
+      { id: '2', name: 'Sarah Wijaya', position: 'Chief Technology Officer', bio: 'Sarah leads our technology vision with expertise in network architecture and cloud infrastructure.', image: 'https://i.pravatar.cc/300?img=47', linkedin: 'https://linkedin.com/in/sarahwijaya', email: 'sarah@supercorridor.com', twitter: '', instagram: '' },
     ],
   });
 

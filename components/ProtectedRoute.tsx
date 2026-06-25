@@ -21,7 +21,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
 
-  const allowed = allowedRoles ?? ['super_admin', 'content', 'hr', 'sales'];
+  const allowed = allowedRoles ?? ['super_admin', 'content', 'hr', 'sales', 'sales_admin'];
 
   if (!isAuthenticated || !user || !user.role || !allowed.includes(user.role)) {
     return <Navigate to="/admin/login" replace />;

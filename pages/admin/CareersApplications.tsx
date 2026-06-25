@@ -162,30 +162,71 @@ export function AdminCareersApplications() {
   };
 
   const handleExportCSV = () => {
-    const headers = ['Name', 'Email', 'Phone', 'Location', 'Job Title', 'Experience', 'Applied Date', 'Status', 'Education', 'Institution', 'Expected Salary'];
-    const rows = filteredApplications.map((app) => [
+    const headers = [
+      'No',
+      'Nama Lengkap',
+      'Email',
+      'No. Telepon',
+      'NIK',
+      'Tempat Lahir',
+      'Tanggal Lahir',
+      'Jenis Kelamin',
+      'Status Pernikahan',
+      'Alamat',
+      'Kota',
+      'Kode Pos',
+      'Posisi Dilamar',
+      'Pengalaman',
+      'Pendidikan',
+      'Institusi',
+      'Jurusan',
+      'IPK',
+      'Gaji Diharapkan',
+      'Tanggal Melamar',
+      'Status',
+      'Kontak Darurat',
+      'No. Kontak Darurat',
+    ];
+
+    const rows = filteredApplications.map((app, idx) => [
+      idx + 1,
       app.applicantName,
       app.email,
       app.phone,
-      app.location,
+      app.nik ?? '',
+      app.birthPlace ?? '',
+      app.birthDate ? new Date(app.birthDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
+      app.gender === 'male' ? 'Laki-laki' : app.gender === 'female' ? 'Perempuan' : '',
+      app.maritalStatus === 'single' ? 'Belum Menikah' : app.maritalStatus === 'married' ? 'Menikah' : app.maritalStatus ?? '',
+      app.address ?? '',
+      app.city ?? '',
+      app.postalCode ?? '',
       app.jobTitle,
       app.experience,
-      app.appliedDate,
-      app.status,
       app.educationLevel ?? '',
       app.institution ?? '',
+      app.major ?? '',
+      app.gpa ?? '',
       app.expectedSalary ?? '',
+      app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
+      app.status === 'new' ? 'Baru' : app.status === 'reviewed' ? 'Ditinjau' : app.status === 'shortlisted' ? 'Shortlist' : app.status === 'rejected' ? 'Ditolak' : app.status,
+      app.emergencyName ?? '',
+      app.emergencyPhone ?? '',
     ]);
 
+    // Use semicolon separator for better Excel compatibility (Indonesia locale)
+    const sep = ';';
     const csvContent = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(sep))
+      .join('\r\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Add BOM for UTF-8 detection in Excel
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `applications-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `Lamaran-${new Date().toLocaleDateString('id-ID', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };

@@ -62,18 +62,44 @@ export function Home() {
     { title: 'Scalable Solutions', description: 'Flexible bandwidth options that grow with your business' },
     { title: 'Enterprise Security', description: 'Advanced DDoS protection and network security' },
   ]);
+  const [solutionsSection, setSolutionsSection] = useState({
+    title: 'Solutions designed for your business',
+    subtitle: 'Choose your business type to see relevant solutions',
+    small: {
+      featuredBadge: 'Featured',
+      featuredTitle: 'Reliable connectivity for growing businesses',
+      featuredDesc: 'Fast, affordable internet solutions to help your small business stay connected and competitive.',
+      featuredLink: '/solutions/dedicated-connectivity',
+      cards: [
+        { title: 'Business Internet', desc: 'High-speed fiber internet up to 1 Gbps with dedicated bandwidth.', link: '/solutions/dedicated-connectivity', icon: 'Smartphone' },
+        { title: 'Security Solutions', desc: 'Protect your business with firewall and DDoS protection.', link: '/solutions/value-added-services', icon: 'Shield' },
+      ],
+      image: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800&q=80',
+    },
+    enterprise: {
+      featuredBadge: 'Featured',
+      featuredTitle: 'Helping enterprises scale and innovate',
+      featuredDesc: 'Enterprise-grade connectivity and network infrastructure designed for digital transformation.',
+      featuredLink: '/solutions/dedicated-connectivity',
+      cards: [
+        { title: 'Dedicated Connectivity', desc: 'Private fiber connections up to 100 Gbps with 99.99% uptime SLA.', link: '/solutions/dedicated-connectivity', icon: 'Network', badge: 'Popular' },
+        { title: 'Cloud Connect', desc: 'Direct, secure connectivity to AWS, Azure, and Google Cloud.', link: '/solutions/cloud-interconnection', icon: 'Zap', badge: 'New' },
+      ],
+      image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80',
+    },
+  });
   const [tgcsData, setTgcsData] = useState(() => ({
     hero: {
       title: 'SuperCorridor TGCS',
       subtitle: 'Trans Global Cable System',
       description:
-        'A state-of-the-art submarine cable system connecting strategic locations across Indonesia with world-class reliability and capacity.',
+        'Asia’s pioneering 24 fiber pair repeated submarine system, A next-generation hyperscale subsea infrastructure, future proofing regional connectivity for the digital era',
       enabled: true,
     },
     statistics: {
       cableLength: '1,200+ KM',
       fiberPairs: '12',
-      capacity: '40 Tbps',
+      capacity: '480 Tbps',
       rfsSchedule: 'Q2 2025',
     },
   }));
@@ -95,12 +121,15 @@ export function Home() {
         setTgcsData(data.tgcs);
       }
       if (homeRes.ok) {
-        const data = (await homeRes.json()) as { ok: true; homeManagement: { heroData: { title: string; subtitle: string; ctaText: string; ctaLink: string; backgroundImage: string }; stats: { label: string; value: string; suffix: string }[]; features?: { title: string; description: string }[] } | null };
+        const data = (await homeRes.json()) as { ok: true; homeManagement: { heroData: { title: string; subtitle: string; ctaText: string; ctaLink: string; backgroundImage: string }; stats: { label: string; value: string; suffix: string }[]; features?: { title: string; description: string }[]; solutionsSection?: typeof solutionsSection } | null };
         if (data.homeManagement?.stats) {
           setHomeStats(data.homeManagement.stats);
         }
         if (data.homeManagement?.features && data.homeManagement.features.length > 0) {
           setHomeFeatures(data.homeManagement.features);
+        }
+        if (data.homeManagement?.solutionsSection) {
+          setSolutionsSection(prev => ({ ...prev, ...data.homeManagement!.solutionsSection }));
         }
       }
     };
@@ -234,7 +263,7 @@ export function Home() {
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center border border-white/20">
                   <div className="text-3xl mb-1 text-orange-400">{tgcsData.statistics.capacity}</div>
-                  <div className="text-xs text-blue-100">Total Capacity</div>
+                  <div className="text-xs text-blue-100">20 Tbps Per Fiber Pair</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center border border-white/20">
                   <div className="text-3xl mb-1 text-orange-400">{tgcsData.statistics.rfsSchedule}</div>
@@ -250,8 +279,8 @@ export function Home() {
       <section className="py-16 lg:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl text-gray-900 mb-4">Solutions designed for your business</h2>
-            <p className="text-xl text-gray-600">Choose your business type to see relevant solutions</p>
+            <h2 className="text-3xl lg:text-4xl text-gray-900 mb-4">{solutionsSection.title}</h2>
+            <p className="text-xl text-gray-600">{solutionsSection.subtitle}</p>
           </div>
 
           {/* Tabs */}
@@ -285,58 +314,34 @@ export function Home() {
                 <div>
                   <div className="bg-stone-50 p-8 rounded-2xl mb-4">
                     <span className="inline-block bg-blue-600 text-white px-3 py-1 text-sm mb-3 rounded">
-                      Featured
+                      {solutionsSection.small.featuredBadge}
                     </span>
-                    <h3 className="text-2xl mb-3">Reliable connectivity for growing businesses</h3>
-                    <p className="text-gray-700 mb-4">
-                      Fast, affordable internet solutions to help your small business stay connected and competitive.
-                    </p>
-                    <Link to="/solutions/dedicated-connectivity" className="inline-flex items-center text-blue-600 hover:text-blue-700">
+                    <h3 className="text-2xl mb-3">{solutionsSection.small.featuredTitle}</h3>
+                    <p className="text-gray-700 mb-4">{solutionsSection.small.featuredDesc}</p>
+                    <Link to={solutionsSection.small.featuredLink} className="inline-flex items-center text-blue-600 hover:text-blue-700">
                       Learn more
                       <ChevronRight className="w-4 h-4 ml-1" />
                     </Link>
                   </div>
 
                   <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-blue-500 transition-colors">
-                      <Smartphone className="w-8 h-8 text-blue-600 mb-3" />
-                      <h4 className="text-lg mb-2">Business Internet</h4>
-                      <p className="text-gray-600 text-sm mb-3">
-                        High-speed fiber internet up to 1 Gbps with dedicated bandwidth.
-                      </p>
-                      <Link to="/solutions/dedicated-connectivity" className="text-blue-600 text-sm inline-flex items-center">
-                        Learn more
-                        <ChevronRight className="w-3 h-3 ml-1" />
-                      </Link>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-blue-500 transition-colors">
-                      <Shield className="w-8 h-8 text-blue-600 mb-3" />
-                      <h4 className="text-lg mb-2">Security Solutions</h4>
-                      <p className="text-gray-600 text-sm mb-3">
-                        Protect your business with firewall and DDoS protection.
-                      </p>
-                      <Link to="/solutions/value-added-services" className="text-blue-600 text-sm inline-flex items-center">
-                        Learn more
-                        <ChevronRight className="w-3 h-3 ml-1" />
-                      </Link>
-                    </div>
+                    {solutionsSection.small.cards.map((card, idx) => (
+                      <div key={idx} className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-blue-500 transition-colors">
+                        {card.icon === 'Shield' ? <Shield className="w-8 h-8 text-blue-600 mb-3" /> : card.icon === 'Network' ? <Network className="w-8 h-8 text-blue-600 mb-3" /> : card.icon === 'Zap' ? <Zap className="w-8 h-8 text-blue-600 mb-3" /> : card.icon === 'Headphones' ? <Headphones className="w-8 h-8 text-blue-600 mb-3" /> : card.icon === 'Cable' ? <Cable className="w-8 h-8 text-blue-600 mb-3" /> : <Smartphone className="w-8 h-8 text-blue-600 mb-3" />}
+                        <h4 className="text-lg mb-2">{card.title}</h4>
+                        <p className="text-gray-600 text-sm mb-3">{card.desc}</p>
+                        <Link to={card.link} className="text-blue-600 text-sm inline-flex items-center">
+                          Learn more <ChevronRight className="w-3 h-3 ml-1" />
+                        </Link>
+                      </div>
+                    ))}
                   </div>
 
-                  <div className="mt-6">
-                    <Link
-                      to="/solutions/dedicated-connectivity"
-                      className="inline-flex items-center px-8 py-3 border-2 border-black text-black rounded-full hover:bg-black hover:text-white transition-colors"
-                    >
-                      More small business solutions
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Link>
-                  </div>
                 </div>
 
                 <div>
                   <ImageWithFallback
-                    src="https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800&q=80"
+                    src={solutionsSection.small.image}
                     alt="Small Business"
                     className="rounded-2xl shadow-lg w-full h-full object-cover"
                   />
@@ -349,62 +354,37 @@ export function Home() {
                 <div>
                   <div className="bg-stone-50 p-8 rounded-2xl mb-4">
                     <span className="inline-block bg-orange-600 text-white px-3 py-1 text-sm mb-3 rounded">
-                      Featured
+                      {solutionsSection.enterprise.featuredBadge}
                     </span>
-                    <h3 className="text-2xl mb-3">Helping enterprises scale and innovate</h3>
-                    <p className="text-gray-700 mb-4">
-                      Enterprise-grade connectivity and network infrastructure designed for digital transformation.
-                    </p>
-                    <Link to="/solutions/dedicated-connectivity" className="inline-flex items-center text-orange-600 hover:text-orange-700">
+                    <h3 className="text-2xl mb-3">{solutionsSection.enterprise.featuredTitle}</h3>
+                    <p className="text-gray-700 mb-4">{solutionsSection.enterprise.featuredDesc}</p>
+                    <Link to={solutionsSection.enterprise.featuredLink} className="inline-flex items-center text-orange-600 hover:text-orange-700">
                       Learn more
                       <ChevronRight className="w-4 h-4 ml-1" />
                     </Link>
                   </div>
 
                   <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-orange-500 transition-colors">
-                      <span className="inline-block bg-orange-600 text-white px-2 py-1 text-xs mb-2 rounded">
-                        Popular
-                      </span>
-                      <h4 className="text-lg mb-2">Dedicated Connectivity</h4>
-                      <p className="text-gray-600 text-sm mb-3">
-                        Private fiber connections up to 100 Gbps with 99.99% uptime SLA.
-                      </p>
-                      <Link to="/solutions/dedicated-connectivity" className="text-orange-600 text-sm inline-flex items-center">
-                        Learn more
-                        <ChevronRight className="w-3 h-3 ml-1" />
-                      </Link>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-orange-500 transition-colors">
-                      <span className="inline-block bg-orange-600 text-white px-2 py-1 text-xs mb-2 rounded">
-                        New
-                      </span>
-                      <h4 className="text-lg mb-2">Cloud Connect</h4>
-                      <p className="text-gray-600 text-sm mb-3">
-                        Direct, secure connectivity to AWS, Azure, and Google Cloud.
-                      </p>
-                      <Link to="/solutions/cloud-interconnection" className="text-orange-600 text-sm inline-flex items-center">
-                        Learn more
-                        <ChevronRight className="w-3 h-3 ml-1" />
-                      </Link>
-                    </div>
+                    {solutionsSection.enterprise.cards.map((card, idx) => (
+                      <div key={idx} className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-orange-500 transition-colors">
+                        {'badge' in card && card.badge && (
+                          <span className="inline-block bg-orange-600 text-white px-2 py-1 text-xs mb-2 rounded">{card.badge}</span>
+                        )}
+                        {card.icon === 'Zap' ? <Zap className="w-8 h-8 text-orange-600 mb-3" /> : card.icon === 'Shield' ? <Shield className="w-8 h-8 text-orange-600 mb-3" /> : card.icon === 'Smartphone' ? <Smartphone className="w-8 h-8 text-orange-600 mb-3" /> : card.icon === 'Headphones' ? <Headphones className="w-8 h-8 text-orange-600 mb-3" /> : card.icon === 'Cable' ? <Cable className="w-8 h-8 text-orange-600 mb-3" /> : <Network className="w-8 h-8 text-orange-600 mb-3" />}
+                        <h4 className="text-lg mb-2">{card.title}</h4>
+                        <p className="text-gray-600 text-sm mb-3">{card.desc}</p>
+                        <Link to={card.link} className="text-orange-600 text-sm inline-flex items-center">
+                          Learn more <ChevronRight className="w-3 h-3 ml-1" />
+                        </Link>
+                      </div>
+                    ))}
                   </div>
 
-                  <div className="mt-6">
-                    <Link
-                      to="/solutions/dedicated-connectivity"
-                      className="inline-flex items-center px-8 py-3 border-2 border-black text-black rounded-full hover:bg-black hover:text-white transition-colors"
-                    >
-                      More enterprise solutions
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Link>
-                  </div>
                 </div>
 
                 <div>
                   <ImageWithFallback
-                    src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80"
+                    src={solutionsSection.enterprise.image}
                     alt="Enterprise"
                     className="rounded-2xl shadow-lg w-full h-full object-cover"
                   />
@@ -414,7 +394,6 @@ export function Home() {
           </div>
         </div>
       </section>
-
       {/* Stats Counter */}
       <section className="py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

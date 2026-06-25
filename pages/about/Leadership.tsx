@@ -1,49 +1,31 @@
-import { useEffect, useState } from 'react';
-import { Linkedin, Mail } from 'lucide-react';
+import { Linkedin, Mail, Twitter, Instagram } from 'lucide-react';
+import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
+import { usePageContent } from '../../hooks/usePageContent';
 
 interface Leader {
+  id?: string;
   name: string;
-  title: string;
+  position: string;
   bio: string;
-  color: string;
+  image?: string;
+  linkedin?: string;
+  email?: string;
+  twitter?: string;
+  instagram?: string;
+  color?: string;
 }
 
-const defaultLeaders: Leader[] = [
-  { name: 'John Anderson', title: 'Chief Executive Officer', bio: "With over 25 years in telecommunications, John leads SuperCorridor's strategic vision and growth.", color: 'orange' },
-  { name: 'Sarah Chen', title: 'Chief Technology Officer', bio: 'Sarah drives our technology innovation and oversees our network infrastructure development.', color: 'blue' },
-  { name: 'Michael Roberts', title: 'Chief Operating Officer', bio: 'Michael ensures operational excellence and service delivery across all our client engagements.', color: 'green' },
-  { name: 'Lisa Martinez', title: 'Chief Financial Officer', bio: 'Lisa manages our financial strategy and investor relations, driving sustainable growth.', color: 'orange' },
-  { name: 'David Kumar', title: 'VP of Sales & Marketing', bio: 'David leads our go-to-market strategy and builds lasting relationships with enterprise clients.', color: 'blue' },
-  { name: 'Emily Wong', title: 'VP of Customer Success', bio: 'Emily ensures our clients receive exceptional support and achieve their connectivity goals.', color: 'green' },
-];
-
 export function Leadership() {
-  const [leaders, setLeaders] = useState<Leader[]>(defaultLeaders);
+  const content = usePageContent('about-leadership', {
+    teamMembers: [] as Leader[],
+  });
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const response = await fetch('/api/content/pages/about-leadership');
-        if (response.ok) {
-          const result = await response.json();
-          if (result.data?.teamMembers && result.data.teamMembers.length > 0) {
-            const colors = ['orange', 'blue', 'green'];
-            setLeaders(
-              result.data.teamMembers.map((m: { name: string; position: string; bio: string }, i: number) => ({
-                name: m.name,
-                title: m.position,
-                bio: m.bio,
-                color: colors[i % 3],
-              }))
-            );
-          }
-        }
-      } catch {
-        // use defaults
-      }
-    };
-    void load();
-  }, []);
+  const colors = ['orange', 'blue', 'green'];
+  const leaders: Leader[] = (content.teamMembers || []).map((m: Leader, i: number) => ({
+    ...m,
+    color: colors[i % 3],
+  }));
+
   return (
     <div>
       {/* Hero */}
@@ -64,20 +46,32 @@ export function Leadership() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {leaders.map((leader, index) => (
               <div
-                key={index}
+                key={leader.id || index}
                 className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow"
               >
-                <div
-                  className={`w-24 h-24 rounded-full mb-4 mx-auto bg-gradient-to-br ${
-                    leader.color === 'orange'
-                      ? 'from-orange-400 to-orange-600'
-                      : leader.color === 'blue'
-                      ? 'from-blue-400 to-blue-600'
-                      : 'from-green-400 to-green-600'
-                  } flex items-center justify-center text-white text-3xl`}
-                >
-                  {leader.name.split(' ').map(n => n[0]).join('')}
-                </div>
+                {/* Photo or Initials */}
+                {leader.image ? (
+                  <div className="w-24 h-24 rounded-full mb-4 mx-auto overflow-hidden">
+                    <ImageWithFallback
+                      src={leader.image}
+                      alt={leader.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className={`w-24 h-24 rounded-full mb-4 mx-auto bg-gradient-to-br ${
+                      leader.color === 'orange'
+                        ? 'from-orange-400 to-orange-600'
+                        : leader.color === 'blue'
+                        ? 'from-blue-400 to-blue-600'
+                        : 'from-green-400 to-green-600'
+                    } flex items-center justify-center text-white text-3xl`}
+                  >
+                    {leader.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                )}
+
                 <h3 className="text-xl text-center mb-1">{leader.name}</h3>
                 <p
                   className={`text-center mb-4 ${
@@ -88,34 +82,58 @@ export function Leadership() {
                       : 'text-green-600'
                   }`}
                 >
-                  {leader.title}
+                  {leader.position}
                 </p>
                 <p className="text-gray-600 text-center mb-4">{leader.bio}</p>
-                <div className="flex justify-center space-x-4">
-                  <a
-                    href="#"
-                    className={`${
-                      leader.color === 'orange'
-                        ? 'text-orange-500 hover:text-orange-600'
-                        : leader.color === 'blue'
-                        ? 'text-blue-600 hover:text-blue-700'
-                        : 'text-green-600 hover:text-green-700'
-                    } transition-colors`}
-                  >
-                    <Linkedin className="w-5 h-5" />
-                  </a>
-                  <a
-                    href="#"
-                    className={`${
-                      leader.color === 'orange'
-                        ? 'text-orange-500 hover:text-orange-600'
-                        : leader.color === 'blue'
-                        ? 'text-blue-600 hover:text-blue-700'
-                        : 'text-green-600 hover:text-green-700'
-                    } transition-colors`}
-                  >
-                    <Mail className="w-5 h-5" />
-                  </a>
+
+                {/* Social Media Links */}
+                <div className="flex justify-center space-x-3">
+                  {leader.linkedin && (
+                    <a
+                      href={leader.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-700 transition-colors"
+                      aria-label={`${leader.name} LinkedIn`}
+                    >
+                      <Linkedin className="w-5 h-5" />
+                    </a>
+                  )}
+                  {leader.email && (
+                    <a
+                      href={`mailto:${leader.email}`}
+                      className="text-gray-600 hover:text-gray-700 transition-colors"
+                      aria-label={`Email ${leader.name}`}
+                    >
+                      <Mail className="w-5 h-5" />
+                    </a>
+                  )}
+                  {leader.twitter && (
+                    <a
+                      href={leader.twitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sky-500 hover:text-sky-600 transition-colors"
+                      aria-label={`${leader.name} Twitter`}
+                    >
+                      <Twitter className="w-5 h-5" />
+                    </a>
+                  )}
+                  {leader.instagram && (
+                    <a
+                      href={leader.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-pink-500 hover:text-pink-600 transition-colors"
+                      aria-label={`${leader.name} Instagram`}
+                    >
+                      <Instagram className="w-5 h-5" />
+                    </a>
+                  )}
+                  {/* Fallback if no social links */}
+                  {!leader.linkedin && !leader.email && !leader.twitter && !leader.instagram && (
+                    <span className="text-xs text-gray-400 italic">No social media</span>
+                  )}
                 </div>
               </div>
             ))}

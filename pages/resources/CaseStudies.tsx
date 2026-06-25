@@ -69,6 +69,7 @@ export function CaseStudies() {
             const industry = typeof cs.industry === 'string' ? cs.industry : '';
             const challenge = typeof cs.challenge === 'string' ? cs.challenge : '';
             const solution = typeof cs.solution === 'string' ? cs.solution : '';
+            const image = typeof cs.image === 'string' ? cs.image : '';
             const resultsRaw = cs.results;
             let results: string[] = [];
             if (Array.isArray(resultsRaw)) {
@@ -90,6 +91,7 @@ export function CaseStudies() {
               challenge,
               solution,
               results: results.length > 0 ? results : ['Learn more about results'],
+              image,
               icon: icons[index % icons.length],
               color: colors[index % colors.length],
             };
@@ -139,7 +141,15 @@ export function CaseStudies() {
                 <div className="flex flex-col md:flex-row">
                   {/* Image */}
                   <div className="md:w-72 h-48 md:h-auto flex-shrink-0 relative overflow-hidden">
-                    <div className={`w-full h-full ${study.color === 'orange' ? 'bg-gradient-to-br from-orange-400 to-orange-600' : study.color === 'blue' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-green-400 to-green-600'}`}>
+                    {'image' in study && (study as any).image ? (
+                      <img
+                        src={(study as any).image}
+                        alt={study.client}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
+                      />
+                    ) : null}
+                    <div className={`w-full h-full ${study.color === 'orange' ? 'bg-gradient-to-br from-orange-400 to-orange-600' : study.color === 'blue' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-green-400 to-green-600'} ${'image' in study && (study as any).image ? 'hidden absolute inset-0' : ''}`}>
                       <div className="absolute inset-0 flex items-center justify-center">
                         <study.icon className="w-16 h-16 text-white/30" />
                       </div>

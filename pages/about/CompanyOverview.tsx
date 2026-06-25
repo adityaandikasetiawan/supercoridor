@@ -6,6 +6,7 @@ export function CompanyOverview() {
   const content = usePageContent('about-company-overview', {
     title: 'Company Overview',
     subtitle: 'Leading the future of enterprise connectivity with innovation, reliability, and exceptional service.',
+    heroImage: 'https://images.unsplash.com/photo-1674981208693-de5a9c4c4f44?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvZmZpY2UlMjBidWlsZGluZyUyMG1vZGVybnxlbnwxfHx8fDE3NjczMjAwMzB8MA&ixlib=rb-4.1.0&q=80&w=1080',
     companyDescription: "Founded with a vision to transform enterprise connectivity, SuperCorridor has grown to become one of Indonesia's leading internet service providers. We specialize in delivering high-performance, reliable network solutions to businesses of all sizes.",
     additionalDescription: "Our extensive fiber-optic infrastructure spans across major business districts, connecting enterprises to the digital world with unmatched speed and reliability. We serve over 500 corporate clients, from startups to Fortune 500 companies.\n\nAt SuperCorridor, we believe that connectivity is the foundation of modern business. That's why we're committed to delivering not just internet service, but complete network solutions that empower organizations to achieve their digital transformation goals.",
     stats: [
@@ -18,6 +19,7 @@ export function CompanyOverview() {
       { title: 'Innovation', description: 'We continuously invest in cutting-edge technology to provide our clients with the most advanced connectivity solutions.' },
       { title: 'Reliability', description: 'Our commitment to uptime and performance ensures your business stays connected when it matters most.' },
       { title: 'Customer Focus', description: 'We put our clients first, delivering personalized service and support tailored to their unique needs.' },
+      { title: 'Integrity', description: 'Operating with transparency and ethical standards in everything we do.' },
     ],
   });
 
@@ -49,7 +51,7 @@ export function CompanyOverview() {
             </div>
             <div>
               <ImageWithFallback
-                src="https://images.unsplash.com/photo-1674981208693-de5a9c4c4f44?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvZmZpY2UlMjBidWlsZGluZyUyMG1vZGVybnxlbnwxfHx8fDE3NjczMjAwMzB8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
+                src={(content as any).heroImage || 'https://images.unsplash.com/photo-1674981208693-de5a9c4c4f44?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvZmZpY2UlMjBidWlsZGluZyUyMG1vZGVybnxlbnwxfHx8fDE3NjczMjAwMzB8MA&ixlib=rb-4.1.0&q=80&w=1080'}
                 alt="SuperCorridor Office"
                 className="rounded-lg shadow-xl"
               />

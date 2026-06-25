@@ -21,37 +21,59 @@ export const DEFAULT_BIAYA_TEKNIS = {
   delivery:    500000,
   managedRate: 500000,
   pmRate:      15000000,
-  perjalanan:  2000000,
-  meeting:     500000,
+  operasionalPct: 10,  // percentage of total HW cost for perjalanan + operasional
 };
 
 // ── Cost Engine ───────────────────────────────────────────────────
 export function getBiayaTeknis(params, cfg) {
   const rc = REGION_COSTS[params.region] || REGION_COSTS.JABOTABEK;
-  const bKabel      = params.jarakKabel * cfg.kabelRate;
+  // Use cable device hargaPerMeter if provided, otherwise fall back to config kabelRate
+  const kabelRate = (params.kabelHargaPerMeter && params.kabelHargaPerMeter > 0)
+    ? params.kabelHargaPerMeter
+    : cfg.kabelRate;
+  
+  // One-time / Instalasi costs
+  const bKabel      = params.jarakKabel * kabelRate;
   const bInstalasi  = cfg.instalasi || rc.instalasi;
   const bDelivery   = cfg.delivery || rc.delivery;
-  const bManaged    = cfg.managedRate * params.durasiKontrak;
-  const bPM         = cfg.pmRate * params.durasiPM;
-  const bPerjalanan = cfg.perjalanan * params.jumlahKunjungan;
-  const bMeeting    = cfg.meeting * params.jumlahMeeting;
   const bAkomodasi  = params.jarakKota > 100
     ? Math.floor((params.jarakKota - 100) / 100) * rc.teknisi * params.hariKerja
     : 0;
-  const total = bKabel + bInstalasi + bDelivery + bManaged + bPM + bPerjalanan + bMeeting + bAkomodasi;
-  return { bKabel, bInstalasi, bDelivery, bManaged, bPM, bPerjalanan, bMeeting, bAkomodasi, total };
+  const totalInstalasi = bKabel + bInstalasi + bDelivery + bAkomodasi;
+
+  // Recurring costs (per bulan)
+  const bManaged    = cfg.managedRate;  // per bulan
+  const bPM         = cfg.pmRate;       // per bulan (only for durasiPM months)
+
+  // Total recurring over contract period
+  const totalManagedKontrak = bManaged * params.durasiKontrak;
+  const totalPMKontrak      = bPM * params.durasiPM;
+  const totalRecurring      = totalManagedKontrak + totalPMKontrak;
+
+  const operasionalPct = cfg.operasionalPct ?? 10;
+  const total = totalInstalasi + totalRecurring;
+
+  return {
+    // Instalasi breakdown
+    bKabel, bInstalasi, bDelivery, bAkomodasi, totalInstalasi,
+    // Recurring breakdown
+    bManaged, bPM, totalManagedKontrak, totalPMKontrak, totalRecurring,
+    // General
+    operasionalPct, total, kabelRate,
+  };
 }
 
 // ── Margin Engine ─────────────────────────────────────────────────
 export function calculateMargin(totalBiaya, hargaHW, hargaBW, params) {
-  const { skema, targetMargin, komisiPersen, diskon, jborRate, provisiRate, durasiKontrak } = params;
+  const { skema, targetMargin, komisiPersen, diskon, jborRate, provisiRate, durasiKontrak, biayaInstalasi, biayaRecurringBulan } = params;
   const divisor = 1 - targetMargin;
   if (divisor <= 0) return null;
 
-  let hargaNet, hargaNetBulan, totalRev, totalCost, comVal;
+  let hargaNet, hargaNetBulan, totalRev, totalCost, comVal, hargaOTC, hargaMRC;
   const comAnnualPct = skema === 'otc' ? provisiRate : jborRate + provisiRate;
 
   if (skema === 'otc') {
+    // Everything as one-time cost
     const comAnnual = provisiRate / 100;
     comVal     = totalBiaya * comAnnual;
     totalCost  = totalBiaya + comVal;
@@ -59,7 +81,34 @@ export function calculateMargin(totalBiaya, hargaHW, hargaBW, params) {
     hargaNet   = Math.round(raw * (1 - diskon) / 1000) * 1000;
     hargaNetBulan = Math.round(hargaNet / durasiKontrak / 1000) * 1000;
     totalRev   = hargaNet;
+    hargaOTC   = hargaNet;
+    hargaMRC   = 0;
+  } else if (skema === 'otc_mrc') {
+    // Split: OTC for instalasi, MRC for recurring
+    const otcBase = biayaInstalasi || hargaHW;
+    const mrcBase = biayaRecurringBulan || (totalBiaya - otcBase) / durasiKontrak;
+
+    const comAnnual = (jborRate + provisiRate) / 100;
+
+    // OTC pricing
+    const otcComVal = otcBase * (provisiRate / 100);
+    const otcCost = otcBase + otcComVal;
+    const otcRaw = Math.round((otcCost / divisor) / 1000) * 1000;
+    hargaOTC = Math.round(otcRaw * (1 - diskon) / 1000) * 1000;
+
+    // MRC pricing
+    const mrcComVal = mrcBase * comAnnual;
+    const mrcCost = mrcBase + mrcComVal;
+    const mrcRaw = Math.round((mrcCost / divisor) / 1000) * 1000;
+    hargaMRC = Math.round(mrcRaw * (1 - diskon) / 1000) * 1000;
+
+    hargaNetBulan = hargaMRC;
+    hargaNet = hargaOTC + hargaMRC * durasiKontrak;
+    totalRev = hargaNet;
+    comVal = otcComVal + mrcComVal * durasiKontrak;
+    totalCost = totalBiaya + comVal;
   } else {
+    // recurring: everything spread monthly
     const comAnnual = (jborRate + provisiRate) / 100;
     comVal = totalBiaya * comAnnual / durasiKontrak;
     const costPerBulan = totalBiaya / durasiKontrak + comVal;
@@ -68,15 +117,17 @@ export function calculateMargin(totalBiaya, hargaHW, hargaBW, params) {
     hargaNetBulan = hargaNet;
     totalRev  = hargaNet * durasiKontrak;
     totalCost = totalBiaya + comVal * durasiKontrak;
+    hargaOTC  = 0;
+    hargaMRC  = hargaNetBulan;
   }
 
   const netMargin  = targetMargin - komisiPersen;
   const komisiRp   = totalRev * komisiPersen;
   const payback    = skema === 'otc'
     ? (hargaNet > 0 ? +(hargaHW / hargaNet * durasiKontrak).toFixed(1) : 999)
-    : ((hargaNet - hargaBW) > 0 ? +(hargaHW / (hargaNet - hargaBW)).toFixed(1) : 999);
+    : ((hargaNetBulan - hargaBW) > 0 ? +(hargaHW / (hargaNetBulan - hargaBW)).toFixed(1) : 999);
 
-  return { hargaNet, hargaNetBulan, totalRev, totalCost, margin: netMargin, komisiRp, comVal, comAnnualPct, payback };
+  return { hargaNet, hargaNetBulan, hargaOTC: hargaOTC || 0, hargaMRC: hargaMRC || 0, totalRev, totalCost, margin: netMargin, komisiRp, comVal, comAnnualPct, payback };
 }
 
 // ── Budget Tier ───────────────────────────────────────────────────
@@ -103,6 +154,10 @@ function getBudgetTier(brand, nama = '') {
 // ── Recommendation Engine ─────────────────────────────────────────
 export function generateRecommendations(params, deviceDB) {
   const biayaTeknisCfg = params.biayaTeknisCfg || DEFAULT_BIAYA_TEKNIS;
+  // Allow client to override operasionalPct per quotation
+  if (params.operasionalPct != null && params.operasionalPct >= 0) {
+    biayaTeknisCfg.operasionalPct = params.operasionalPct;
+  }
   const normalizedParams = {
     ...params,
     biayaTeknisCfg,
@@ -115,20 +170,47 @@ export function generateRecommendations(params, deviceDB) {
     jarakKabel: normalizedParams.jarakKabel,
     jarakKota: normalizedParams.jarakKota,
     hariKerja: normalizedParams.hariKerja,
-    jumlahKunjungan: normalizedParams.jumlahKunjungan,
-    jumlahMeeting: normalizedParams.jumlahMeeting,
     durasiKontrak: normalizedParams.durasiKontrak,
     durasiPM: normalizedParams.durasiPM,
     region: normalizedParams.region,
+    // Use hargaPerMeter from selected cable device if available
+    kabelHargaPerMeter: (() => {
+      const kabelDevices = (deviceDB['kabel'] || []).filter(d => d.isActive !== false);
+      if (kabelDevices.length > 0 && kabelDevices[0].hargaPerMeter) {
+        return kabelDevices[0].hargaPerMeter;
+      }
+      return null;
+    })(),
   }, biayaTeknisCfg);
 
   // Filter devices per kategori
   const lists = {};
   for (const sol of normalizedParams.selectedSolusi) {
+    // First try strict match (user range + bandwidth range)
     let matches = (deviceDB[sol] || []).filter(d =>
       d.userMin <= normalizedParams.jumlahUser && d.userMax >= normalizedParams.jumlahUser &&
       (d.bwMax === 0 || d.bwMax === undefined || (d.bwMin <= normalizedParams.bandwidthTarget && d.bwMax >= normalizedParams.bandwidthTarget))
     );
+    // Fallback: if no strict match, try matching only bandwidth (pick highest userMax device)
+    if (matches.length === 0) {
+      matches = (deviceDB[sol] || []).filter(d =>
+        (d.bwMax === 0 || d.bwMax === undefined || (d.bwMin <= normalizedParams.bandwidthTarget && d.bwMax >= normalizedParams.bandwidthTarget))
+      );
+    }
+    // Fallback: if still no match, try matching only user range
+    if (matches.length === 0) {
+      matches = (deviceDB[sol] || []).filter(d =>
+        d.userMin <= normalizedParams.jumlahUser && d.userMax >= normalizedParams.jumlahUser
+      );
+    }
+    // Final fallback: pick the device with the highest capacity in this category
+    if (matches.length === 0) {
+      const allInCat = deviceDB[sol] || [];
+      if (allInCat.length > 0) {
+        const sorted = [...allInCat].sort((a, b) => (b.userMax || 0) - (a.userMax || 0));
+        matches = [sorted[0]];
+      }
+    }
     if (normalizedParams.budgetTierFilter !== 'All') {
       const tierFiltered = matches.filter(d => getBudgetTier(d.brand, d.nama) === normalizedParams.budgetTierFilter);
       if (tierFiltered.length > 0) matches = tierFiltered;
@@ -200,7 +282,15 @@ export function generateRecommendations(params, deviceDB) {
 
     if (!solutionText.length) continue;
 
-    const totalBiaya = biaya.total + hargaHW + hargaBW;
+    // Calculate operasional as percentage of hardware cost (one-time)
+    const bOperasional = Math.round(hargaHW * (biaya.operasionalPct / 100));
+    
+    // Separate: Instalasi (one-time) vs Recurring (over contract)
+    const biayaInstalasi = biaya.totalInstalasi + hargaHW + bOperasional;
+    const biayaRecurringTotal = biaya.totalRecurring + (hargaBW * normalizedParams.durasiKontrak);
+    const biayaRecurringBulan = biaya.bManaged + biaya.bPM + hargaBW;
+    
+    const totalBiaya = biayaInstalasi + biayaRecurringTotal;
     const pricing = calculateMargin(totalBiaya, hargaHW, hargaBW, {
       skema: normalizedParams.skema,
       targetMargin: normalizedParams.targetMargin,
@@ -209,6 +299,8 @@ export function generateRecommendations(params, deviceDB) {
       jborRate: normalizedParams.jborRate,
       provisiRate: normalizedParams.provisiRate,
       durasiKontrak: normalizedParams.durasiKontrak,
+      biayaInstalasi,
+      biayaRecurringBulan,
     });
 
     if (!pricing) continue;
@@ -219,7 +311,16 @@ export function generateRecommendations(params, deviceDB) {
       segmen: normalizedParams.segmen,
       skema: normalizedParams.skema,
       ...pricing,
-      data: { ...biaya, biayaTeknis: biaya.total, hargaHW, hargaBW, totalBiaya, durasi: normalizedParams.durasiKontrak, durasiPM: normalizedParams.durasiPM, region: normalizedParams.region, userCount: normalizedParams.jumlahUser, bwTarget: normalizedParams.bandwidthTarget, namaKlien: normalizedParams.namaKlien || '', qtyMap, items: combo },
+      data: {
+        ...biaya, bOperasional, operasionalPct: biaya.operasionalPct,
+        hargaHW, hargaBW,
+        biayaInstalasi, biayaRecurringTotal, biayaRecurringBulan,
+        totalBiaya,
+        durasi: normalizedParams.durasiKontrak, durasiPM: normalizedParams.durasiPM,
+        region: normalizedParams.region, userCount: normalizedParams.jumlahUser,
+        bwTarget: normalizedParams.bandwidthTarget, namaKlien: normalizedParams.namaKlien || '',
+        qtyMap, items: combo,
+      },
     });
   }
 

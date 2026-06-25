@@ -35,6 +35,13 @@ export const enterpriseApi = {
     reset: () => post('/devices/reset'),
     bulkImport: (devices: unknown[]) => post('/devices/bulk-import', { devices }),
   },
+  packages: {
+    getAll: () => get('/packages'),
+    getAllAdmin: () => get('/packages/all'),
+    create: (body: unknown) => post('/packages', body),
+    update: (id: string, body: unknown) => put(`/packages/${id}`, body),
+    remove: (id: string) => del(`/packages/${id}`),
+  },
   pricing: {
     generate: (params: unknown) => post('/pricing/generate', params),
   },

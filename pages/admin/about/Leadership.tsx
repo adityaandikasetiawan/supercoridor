@@ -11,6 +11,9 @@ interface TeamMember {
   bio: string;
   image: string;
   linkedin: string;
+  email: string;
+  twitter: string;
+  instagram: string;
 }
 
 export function AdminAboutLeadership() {
@@ -22,6 +25,9 @@ export function AdminAboutLeadership() {
       bio: 'John has over 20 years of experience in the telecommunications industry...',
       image: 'https://i.pravatar.cc/300?img=12',
       linkedin: 'https://linkedin.com/in/johnsantoso',
+      email: 'john@supercorridor.com',
+      twitter: '',
+      instagram: '',
     },
     {
       id: '2',
@@ -30,6 +36,9 @@ export function AdminAboutLeadership() {
       bio: 'Sarah leads our technology vision with expertise in network architecture...',
       image: 'https://i.pravatar.cc/300?img=47',
       linkedin: 'https://linkedin.com/in/sarahwijaya',
+      email: 'sarah@supercorridor.com',
+      twitter: '',
+      instagram: '',
     },
   ]);
 
@@ -41,6 +50,9 @@ export function AdminAboutLeadership() {
     bio: '',
     image: '',
     linkedin: '',
+    email: '',
+    twitter: '',
+    instagram: '',
   });
 
   useEffect(() => {
@@ -73,7 +85,7 @@ export function AdminAboutLeadership() {
       setFormData(member);
     } else {
       setEditingMember(null);
-      setFormData({ name: '', position: '', bio: '', image: '', linkedin: '' });
+      setFormData({ name: '', position: '', bio: '', image: '', linkedin: '', email: '', twitter: '', instagram: '' });
     }
     setIsModalOpen(true);
   };
@@ -202,7 +214,40 @@ export function AdminAboutLeadership() {
                       value={formData.linkedin}
                       onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      placeholder="https://linkedin.com/in/username"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      placeholder="name@supercorridor.com"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-1">Twitter / X URL</label>
+                      <input
+                        type="url"
+                        value={formData.twitter}
+                        onChange={(e) => setFormData({ ...formData, twitter: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder="https://twitter.com/username"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-1">Instagram URL</label>
+                      <input
+                        type="url"
+                        value={formData.instagram}
+                        onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder="https://instagram.com/username"
+                      />
+                    </div>
                   </div>
                   <div className="flex gap-3 pt-4">
                     <button
