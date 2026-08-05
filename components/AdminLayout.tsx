@@ -20,6 +20,7 @@ import {
   Layers,
   Cpu,
   Calculator,
+  KeyRound,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -62,7 +63,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const menuItems = [
     ...(hasPermission('dashboard') ? [{ path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' }] : []),
     ...(hasPermission('home') ? [{ path: '/admin/home', icon: Home, label: 'Home Page' }] : []),
-    ...(hasPermission('tgcs') ? [{ path: '/admin/tgcs-management', icon: Layers, label: 'TGCS Project' }] : []),
+    ...(hasPermission('tgcs') ? [{ path: '/admin/tgcs-management', icon: Layers, label: 'Subsea Cable System' }] : []),
     ...(hasPermission('solutions') ? [{ path: '/admin/solutions', icon: Network, label: 'Solutions' }] : []),
     ...(hasPermission('technology') ? [{ path: '/admin/technology', icon: Cpu, label: 'Technology' }] : []),
     ...(hasPermission('about') ? [{
@@ -80,9 +81,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       label: 'Resources',
       icon: FileText,
       submenu: [
-        { path: '/admin/resources/insights', label: 'Insights / Articles' },
-        { path: '/admin/resources/case-studies', label: 'Case Studies' },
-        { path: '/admin/resources/faq', label: 'FAQ' },
+        { path: '/admin/resources/insights', label: 'Articles & Events' },
       ],
     }] : []),
     ...(hasPermission('customers') ? [{ path: '/admin/customers', icon: Users, label: 'Customers' }] : []),
@@ -97,6 +96,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     }] : []),
     ...(hasPermission('enterprise') ? [{ path: '/enterprise', icon: Calculator, label: 'Solusi Enterprise' }] : []),
     ...(hasPermission('settings') ? [{ path: '/admin/settings', icon: Settings, label: 'Settings' }] : []),
+    { path: '/admin/change-password', icon: KeyRound, label: 'Change Password' },
     ...(hasPermission('users') ? [{ path: '/admin/users', icon: Users2, label: 'User Management' }] : []),
   ];
 
@@ -111,9 +111,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         {/* Logo */}
         <div className="p-4 border-b border-gray-800 flex items-center justify-between">
           {sidebarOpen && (
-            <span className="text-lg bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 bg-clip-text text-transparent">
-              SuperCorridor
-            </span>
+            <img src="/image/logo-tis.png" alt="TIS Logo" className="h-12" />
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}

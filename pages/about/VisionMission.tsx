@@ -1,10 +1,13 @@
-import { Target, Eye, Compass } from 'lucide-react';
+import { Target, Telescope, Compass } from 'lucide-react';
 import { usePageContent } from '../../hooks/usePageContent';
+import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
+import { getHeroGradient } from '../../components/HeroGradient';
 
 export function VisionMission() {
   const content = usePageContent('about-vision-mission', {
     title: 'Vision & Mission',
     heroImage: '',
+    heroGradient: 'green',
     vision: 'To be the most trusted and innovative provider of enterprise connectivity solutions in Southeast Asia, empowering businesses to thrive in the digital age through exceptional network infrastructure and unwavering reliability.',
     mission: [
       'Deliver reliable, high-speed internet connectivity to businesses of all sizes',
@@ -24,16 +27,29 @@ export function VisionMission() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-r from-green-600 to-green-700 text-white py-20">
+      <section className={`${getHeroGradient(content.heroGradient)} text-white py-20`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-5xl mb-6">{content.title}</h1>
+            <h1 className="font-bold text-4xl lg:text-5xl mb-6">{content.title}</h1>
             <p className="text-xl opacity-90">
               Guiding principles that drive our commitment to excellence in enterprise connectivity.
             </p>
           </div>
         </div>
       </section>
+
+      {/* Hero Image */}
+      {content.heroImage && (
+        <section className="py-4">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <ImageWithFallback
+              src={content.heroImage}
+              alt={content.title}
+              className="w-full h-64 md:h-96 object-contain"
+            />
+          </div>
+        </section>
+      )}
 
       {/* Main Content */}
       <section className="py-20 bg-white">
@@ -42,10 +58,10 @@ export function VisionMission() {
           <div className="mb-16">
             <div className="flex items-center justify-center mb-8">
               <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-100 text-blue-600 rounded-full">
-                <Eye className="w-10 h-10" />
+                <Telescope className="w-10 h-10" />
               </div>
             </div>
-            <h2 className="text-3xl mb-6 text-center text-blue-600">Our Vision</h2>
+            <h2 className="font-bold text-3xl mb-6 text-center text-blue-600">Our Vision</h2>
             <div className="max-w-4xl mx-auto text-center">
               <p className="text-xl text-gray-700 leading-relaxed">{content.vision}</p>
             </div>
@@ -58,11 +74,11 @@ export function VisionMission() {
                 <Target className="w-10 h-10" />
               </div>
             </div>
-            <h2 className="text-3xl mb-6 text-center text-green-600">Our Mission</h2>
+            <h2 className="font-bold text-3xl mb-6 text-center text-green-600">Our Mission</h2>
             <div className="max-w-4xl mx-auto">
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="flex flex-col items-center gap-6">
                 {(content.mission ?? []).map((item, index) => (
-                  <div key={index} className="bg-green-50 p-6 rounded-lg">
+                  <div key={index} className="bg-green-50 p-6 rounded-lg w-full max-w-2xl text-center">
                     <p className="text-gray-700">{item}</p>
                   </div>
                 ))}
@@ -77,7 +93,7 @@ export function VisionMission() {
                 <Compass className="w-10 h-10" />
               </div>
             </div>
-            <h2 className="text-3xl mb-6 text-center text-orange-600">Strategic Priorities</h2>
+            <h2 className="font-bold text-3xl mb-6 text-center text-orange-600">Strategic Priorities</h2>
             <div className="max-w-4xl mx-auto">
               <div className="space-y-4">
                 {(content.goals ?? []).map((goal, index) => {

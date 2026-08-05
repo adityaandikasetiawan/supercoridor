@@ -27,7 +27,7 @@ async function seed() {
       subtitle: 'Across Indonesia',
       description: 'Enterprise-grade internet solutions with 99.99% uptime guarantee',
       ctaText: 'Get Started',
-      ctaLink: '/contact',
+      ctaLink: '/contact-us',
       backgroundImage: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80',
       order: 1,
     },
@@ -79,7 +79,7 @@ async function seed() {
       title: 'Empowering Business Connectivity Across Indonesia',
       subtitle: 'Enterprise-grade internet solutions with 99.99% uptime guarantee',
       ctaText: 'Get Started',
-      ctaLink: '/contact',
+      ctaLink: '/contact-us',
       backgroundImage: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa',
     },
     stats: [

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../../components/AdminLayout';
 import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiFetch } from '../../../utils/storage';
 import { ImageUpload } from '../../../components/ImageUpload';
+import { GradientPicker } from '../../../components/GradientPicker';
 
 interface TeamMember {
   id: string;
@@ -44,6 +46,7 @@ export function AdminAboutLeadership() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [heroGradient, setHeroGradient] = useState('orange');
   const [formData, setFormData] = useState({
     name: '',
     position: '',
@@ -64,6 +67,9 @@ export function AdminAboutLeadership() {
           if (result.data?.teamMembers) {
             setTeamMembers(result.data.teamMembers);
           }
+          if (result.data?.heroGradient) {
+            setHeroGradient(result.data.heroGradient);
+          }
         }
       } catch {
         // use defaults
@@ -73,10 +79,19 @@ export function AdminAboutLeadership() {
   }, []);
 
   const saveToServer = async (members: TeamMember[]) => {
-    await apiFetch('/api/admin/content/pages/about-leadership', {
-      method: 'PUT',
-      body: JSON.stringify({ data: { teamMembers: members } }),
-    });
+    try {
+      const response = await apiFetch('/api/admin/content/pages/about-leadership', {
+        method: 'PUT',
+        body: JSON.stringify({ data: { teamMembers: members, heroGradient } }),
+      });
+      if (response.ok) {
+        toast.success('Berhasil disimpan!');
+      } else {
+        toast.error('Gagal menyimpan. Coba lagi.');
+      }
+    } catch {
+      toast.error('Gagal menyimpan. Periksa koneksi internet.');
+    }
   };
 
   const handleOpenModal = (member?: TeamMember) => {
@@ -126,6 +141,10 @@ export function AdminAboutLeadership() {
             <Plus className="w-5 h-5 mr-2" />
             Add Team Member
           </button>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <GradientPicker value={heroGradient} onChange={(v) => { setHeroGradient(v); saveToServer(teamMembers); }} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

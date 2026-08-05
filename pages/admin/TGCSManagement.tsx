@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Save, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { AdminLayout } from '../../components/AdminLayout';
 import { apiFetch } from '../../utils/storage';
 import { ImageUpload } from '../../components/ImageUpload';
@@ -38,7 +39,7 @@ interface TGCSData {
 export function AdminTGCSManagement() {
   const [tgcsData, setTgcsData] = useState<TGCSData>({
     hero: {
-      title: 'SuperCorridor TGCS',
+      title: 'Subsea Cable System',
       subtitle: 'Trans Global Cable System',
       description: 'A state-of-the-art submarine cable system connecting strategic locations across Indonesia with world-class reliability and capacity.',
       heroImage: 'https://images.unsplash.com/photo-1563302485-d549ad5a73c8?w=1920&q=80',
@@ -52,7 +53,7 @@ export function AdminTGCSManagement() {
     },
     overview: {
       title: 'Project Overview',
-      description: 'SuperCorridor TGCS represents a significant investment in Indonesia\'s digital infrastructure, providing unparalleled connectivity across key economic zones.',
+      description: 'Subsea Cable System represents a significant investment in Indonesia\'s digital infrastructure, providing unparalleled connectivity across key economic zones.',
       sections: [
         { title: 'Strategic Connectivity', paragraph1: 'The Trans Global Cable System (TGCS) is designed to connect major business hubs across Indonesia, providing low-latency, high-capacity connectivity that supports the growing demands of digital transformation.', paragraph2: 'With 12 fiber pairs and a total capacity of 40 Tbps, TGCS ensures future-proof infrastructure that can scale with Indonesia\'s digital economy.', image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=80' },
         { title: 'World-Class Infrastructure', paragraph1: 'Utilizing the latest submarine cable technology, TGCS is built to the highest international standards, ensuring maximum reliability and performance.', paragraph2: 'The system features advanced monitoring and maintenance capabilities, with 24/7 network operations ensuring minimal downtime and rapid response to any issues.', image: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=80' },
@@ -67,8 +68,8 @@ export function AdminTGCSManagement() {
       { title: 'Global Standards', description: 'Built to international standards with certifications from leading industry bodies.' },
     ],
     cta: {
-      title: 'Interested in TGCS Connectivity?',
-      description: 'Get in touch with our team to learn more about SuperCorridor TGCS',
+      title: 'Interested in Subsea Cable System?',
+      description: 'Get in touch with our team to learn more about Subsea Cable System',
     },
   });
 
@@ -131,6 +132,9 @@ export function AdminTGCSManagement() {
     if (res1.ok && res2.ok) {
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
+      toast.success('Subsea Cable System berhasil disimpan!');
+    } else {
+      toast.error('Gagal menyimpan Subsea Cable System.');
     }
   };
 
@@ -153,8 +157,8 @@ export function AdminTGCSManagement() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl text-gray-900">TGCS Project Management</h1>
-            <p className="text-gray-600 mt-1">Manage all sections of the TGCS project page</p>
+            <h1 className="text-2xl text-gray-900">Subsea Cable System Management</h1>
+            <p className="text-gray-600 mt-1">Manage all sections of the Subsea Cable System page</p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -246,7 +250,20 @@ export function AdminTGCSManagement() {
 
             {tgcsData.overview.sections.map((section, index) => (
               <div key={index} className="bg-white rounded-lg shadow-sm p-6 space-y-4">
-                <h3 className="text-lg text-gray-900">Content Block {index + 1}</h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg text-gray-900">Content Block {index + 1}</h3>
+                  {tgcsData.overview.sections.length > 1 && (
+                    <button
+                      onClick={() => {
+                        const s = tgcsData.overview.sections.filter((_, i) => i !== index);
+                        setTgcsData({ ...tgcsData, overview: { ...tgcsData.overview, sections: s } });
+                      }}
+                      className="text-red-400 hover:text-red-600"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
                 <div>
                   <label className="block text-sm text-gray-700 mb-1">Title</label>
                   <input type="text" value={section.title} onChange={(e) => { const s = [...tgcsData.overview.sections]; s[index] = { ...s[index], title: e.target.value }; setTgcsData({ ...tgcsData, overview: { ...tgcsData.overview, sections: s } }); }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
@@ -262,6 +279,16 @@ export function AdminTGCSManagement() {
                 <ImageUpload value={section.image} onChange={(url) => { const s = [...tgcsData.overview.sections]; s[index] = { ...s[index], image: url }; setTgcsData({ ...tgcsData, overview: { ...tgcsData.overview, sections: s } }); }} label="Section Image" previewClassName="w-full h-24 object-cover rounded-lg" />
               </div>
             ))}
+
+            <button
+              onClick={() => {
+                const newSection = { title: '', paragraph1: '', paragraph2: '', image: '' };
+                setTgcsData({ ...tgcsData, overview: { ...tgcsData.overview, sections: [...tgcsData.overview.sections, newSection] } });
+              }}
+              className="w-full bg-orange-600 text-white px-4 py-3 rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center text-sm"
+            >
+              <Plus className="w-4 h-4 mr-2" /> Add Content Block
+            </button>
           </div>
         )}
 

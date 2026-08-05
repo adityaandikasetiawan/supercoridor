@@ -22,20 +22,32 @@ export function Dashboard() {
     totalApplications: 0,
     newApplications: 0,
   });
+  const [activityLog, setActivityLog] = useState<{ id: string; user: string; action: string; details: string; timestamp: string }[]>([]);
+
+  const loadData = async () => {
+    try {
+      const statsRes = await apiFetch('/api/admin/dashboard-stats', { method: 'GET' });
+      if (statsRes.ok) {
+        const data = await statsRes.json();
+        if (data.stats) setDashboardStats(data.stats);
+      }
+      // Activity log only for super admin
+      if (user?.role === 'super_admin' || user?.role === 'admin') {
+        const logRes = await apiFetch('/api/admin/activity-log', { method: 'GET' });
+        if (logRes.ok) {
+          const data = await logRes.json();
+          if (data.logs) setActivityLog(data.logs);
+        }
+      }
+    } catch {
+      // use defaults
+    }
+  };
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const response = await apiFetch('/api/admin/dashboard-stats', { method: 'GET' });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.stats) setDashboardStats(data.stats);
-        }
-      } catch {
-        // use defaults
-      }
-    };
-    void load();
+    loadData();
+    const interval = setInterval(loadData, 30000); // auto-refresh every 30s
+    return () => clearInterval(interval);
   }, []);
 
   const stats = [
@@ -120,16 +132,14 @@ export function Dashboard() {
     });
   }
 
-  const recentActivity = dashboardStats.newMessages > 0 || dashboardStats.newApplications > 0
-    ? [
-        ...(dashboardStats.newMessages > 0 ? [{ action: `${dashboardStats.newMessages} new contact message(s) waiting for review`, time: 'Recent' }] : []),
-        ...(dashboardStats.newApplications > 0 ? [{ action: `${dashboardStats.newApplications} new job application(s) to review`, time: 'Recent' }] : []),
-        { action: `${dashboardStats.totalMessages} total contact messages`, time: 'All time' },
-        { action: `${dashboardStats.totalApplications} total job applications`, time: 'All time' },
-      ]
-    : [
-        { action: 'No new activity yet', time: 'Start by adding content via the admin panel' },
-      ];
+  const recentActivity = activityLog.length > 0
+    ? activityLog.slice(0, 10)
+    : (dashboardStats.newMessages > 0 || dashboardStats.newApplications > 0
+      ? [
+          ...(dashboardStats.newMessages > 0 ? [{ id: 'm', user: '', action: `${dashboardStats.newMessages} new contact message(s) waiting for review`, details: '', timestamp: '' }] : []),
+          ...(dashboardStats.newApplications > 0 ? [{ id: 'a', user: '', action: `${dashboardStats.newApplications} new job application(s) to review`, details: '', timestamp: '' }] : []),
+        ]
+      : [{ id: 'empty', user: '', action: 'No activity yet', details: 'Start by adding content via the admin panel', timestamp: '' }]);
 
   return (
     <AdminLayout>
@@ -178,24 +188,39 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Recent Activity - Super Admin only */}
+      {(user?.role === 'super_admin' || user?.role === 'admin') && (
       <div className="bg-white rounded-xl shadow-sm p-6 border-2 border-gray-100">
-        <div className="flex items-center mb-4">
-          <TrendingUp className="w-6 h-6 text-orange-600 mr-2" />
-          <h2 className="text-2xl">Recent Activity</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <TrendingUp className="w-6 h-6 text-orange-600 mr-2" />
+            <h2 className="text-2xl">Recent Activity</h2>
+          </div>
+          <a
+            href="/api/admin/activity-log/export"
+            className="text-sm bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Export CSV (1 bulan)
+          </a>
         </div>
         <div className="space-y-4">
           {recentActivity.map((activity, index) => (
             <div
-              key={index}
+              key={activity.id || index}
               className="flex items-start justify-between py-3 border-b border-gray-100 last:border-0"
             >
-              <p className="text-gray-700">{activity.action}</p>
-              <span className="text-sm text-gray-500 whitespace-nowrap ml-4">{activity.time}</span>
+              <div>
+                <p className="text-gray-700">{activity.action}{activity.details ? ` — ${activity.details}` : ''}</p>
+                {activity.user && <p className="text-xs text-gray-400">{activity.user}</p>}
+              </div>
+              <span className="text-sm text-gray-500 whitespace-nowrap ml-4">
+                {activity.timestamp ? new Date(activity.timestamp).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+              </span>
             </div>
           ))}
         </div>
       </div>
+      )}
     </AdminLayout>
   );
 }

@@ -3,11 +3,15 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'r
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { Toaster } from './components/ui/sonner';
 
 // Layouts
 import { Navbar } from './components/Navbar';
 import { ContactBar } from './components/ContactBar';
 import { Footer } from './components/Footer';
+
+// Maintenance Page — kept as import in case needed later
+// import { Maintenance } from './pages/Maintenance';
 
 // Public Pages
 import { Home } from './pages/Home';
@@ -18,10 +22,8 @@ import { Careers } from './pages/Careers';
 import { TGCSProject } from './pages/TGCSProject';
 
 // Solutions Pages
-import { DedicatedConnectivity } from './pages/solutions/DedicatedConnectivity';
-import { BackboneNetwork } from './pages/solutions/BackboneNetwork';
-import { CloudInterconnection } from './pages/solutions/CloudInterconnection';
-import { ValueAddedServices } from './pages/solutions/ValueAddedServices';
+import { DynamicSolution } from './pages/solutions/DynamicSolution';
+import { DynamicTechnology } from './pages/solutions/DynamicTechnology';
 
 // About Pages
 import { CompanyOverview } from './pages/about/CompanyOverview';
@@ -42,6 +44,7 @@ import { Dashboard } from './pages/admin/Dashboard';
 import { AdminHomeManagement } from './pages/admin/HomeManagement';
 import { ManageContact } from './pages/admin/ManageContact';
 import { Settings } from './pages/admin/Settings';
+import { ChangePassword } from './pages/admin/ChangePassword';
 import { UserManagement } from './pages/admin/UserManagement';
 
 // Admin Resources
@@ -81,6 +84,11 @@ import { EnterpriseDevices } from './pages/enterprise/Devices';
 // 404 Page
 import { NotFound } from './pages/NotFound';
 
+/**
+ * MaintenanceGate — disabled, kept for reference
+ * Previously showed maintenance page on "/" in production.
+ */
+
 function ScrollToTop() {
   const { pathname } = useLocation();
 
@@ -96,16 +104,41 @@ function TitleManager() {
   const { lang } = useLanguage();
 
   useEffect(() => {
+    // Load SEO settings and apply meta tags
+    (async () => {
+      try {
+        const res = await fetch('/api/content/settings', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          const seo = data.settings?.seo;
+          if (seo) {
+            if (seo.metaDescription) {
+              let metaDesc = document.querySelector('meta[name="description"]');
+              if (!metaDesc) { metaDesc = document.createElement('meta'); metaDesc.setAttribute('name', 'description'); document.head.appendChild(metaDesc); }
+              metaDesc.setAttribute('content', seo.metaDescription);
+            }
+            if (seo.ogImage) {
+              let ogImg = document.querySelector('meta[property="og:image"]');
+              if (!ogImg) { ogImg = document.createElement('meta'); ogImg.setAttribute('property', 'og:image'); document.head.appendChild(ogImg); }
+              ogImg.setAttribute('content', seo.ogImage);
+            }
+          }
+        }
+      } catch { /* ignore */ }
+    })();
+  }, []);
+
+  useEffect(() => {
     const base = 'SuperCorridor';
 
     const titleFor = (path: string) => {
       const id = {
         '/': 'Beranda',
         '/network-coverage': 'Cakupan Jaringan',
-        '/contact': 'Hubungi Kami',
+        '/contact-us': 'Hubungi Kami',
         '/careers': 'Karir',
         '/customers': 'Pelanggan',
-        '/tgcs-project': 'Proyek TGCS',
+        '/subsea-cable-system': 'Subsea Cable System',
         '/solutions/dedicated-connectivity': 'Konektivitas Dedicated',
         '/solutions/backbone-network': 'Backbone & Infrastruktur Jaringan',
         '/solutions/cloud-interconnection': 'Layanan Cloud & Interkoneksi',
@@ -114,7 +147,7 @@ function TitleManager() {
         '/about/vision-mission': 'Visi & Misi',
         '/about/leadership': 'Tim Kepemimpinan',
         '/about/milestones': 'Pencapaian',
-        '/resources/insights': 'Artikel & Insight',
+        '/resources/insights': 'Artikel & Event',
         '/resources/case-studies': 'Studi Kasus',
         '/resources/faq': 'FAQ',
         '/admin/login': 'Admin | Masuk',
@@ -131,16 +164,16 @@ function TitleManager() {
         '/admin/solutions/dedicated-connectivity': 'Admin | Dedicated Connectivity',
         '/admin/solutions/backbone-network': 'Admin | Backbone Network',
         '/admin/network-coverage': 'Admin | Network Coverage',
-        '/admin/tgcs-management': 'Admin | TGCS Management',
+        '/admin/tgcs-management': 'Admin | Subsea Cable System',
       } as const;
 
       const en = {
         '/': 'Home',
         '/network-coverage': 'Network Coverage',
-        '/contact': 'Contact',
+        '/contact-us': 'Contact',
         '/careers': 'Careers',
         '/customers': 'Customers',
-        '/tgcs-project': 'TGCS Project',
+        '/subsea-cable-system': 'Subsea Cable System',
         '/solutions/dedicated-connectivity': 'Dedicated Connectivity',
         '/solutions/backbone-network': 'Backbone & Network Infrastructure',
         '/solutions/cloud-interconnection': 'Cloud & Interconnection Services',
@@ -149,7 +182,7 @@ function TitleManager() {
         '/about/vision-mission': 'Vision & Mission',
         '/about/leadership': 'Leadership Team',
         '/about/milestones': 'Milestones',
-        '/resources/insights': 'Articles & Insights',
+        '/resources/insights': 'Articles & Events',
         '/resources/case-studies': 'Case Studies',
         '/resources/faq': 'FAQ',
         '/admin/login': 'Admin | Login',
@@ -166,7 +199,7 @@ function TitleManager() {
         '/admin/solutions/dedicated-connectivity': 'Admin | Dedicated Connectivity',
         '/admin/solutions/backbone-network': 'Admin | Backbone Network',
         '/admin/network-coverage': 'Admin | Network Coverage',
-        '/admin/tgcs-management': 'Admin | TGCS Management',
+        '/admin/tgcs-management': 'Admin | Subsea Cable System',
       } as const;
 
       if (path.startsWith('/admin') && !(path in en) && !(path in id)) {
@@ -199,6 +232,7 @@ export default function App() {
         <Router>
           <ScrollToTop />
           <TitleManager />
+          <Toaster position="top-right" richColors />
           <Routes>
             {/* Admin Routes */}
             <Route path="/admin/login" element={<Login />} />
@@ -225,6 +259,7 @@ export default function App() {
                       }
                     />
                     <Route path="settings" element={<Settings />} />
+                    <Route path="change-password" element={<ChangePassword />} />
                     <Route
                       path="users"
                       element={
@@ -243,6 +278,7 @@ export default function App() {
                         </RequireAdminRole>
                       }
                     />
+                    {/* Case Studies hidden
                     <Route
                       path="resources/case-studies"
                       element={
@@ -251,6 +287,8 @@ export default function App() {
                         </RequireAdminRole>
                       }
                     />
+                    */}
+                    {/* FAQ hidden
                     <Route
                       path="resources/faq"
                       element={
@@ -259,6 +297,7 @@ export default function App() {
                         </RequireAdminRole>
                       }
                     />
+                    */}
                     
                     {/* Careers Routes */}
                     <Route
@@ -376,35 +415,32 @@ export default function App() {
             <Route
               path="*"
               element={
-                <div className="min-h-screen bg-white flex flex-col">
-                  <Navbar />
-                  <main className="flex-grow">
-                    <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/solutions/dedicated-connectivity" element={<DedicatedConnectivity />} />
-                      <Route path="/solutions/backbone-network" element={<BackboneNetwork />} />
-                      <Route path="/solutions/cloud-interconnection" element={<CloudInterconnection />} />
-                      <Route path="/solutions/value-added-services" element={<ValueAddedServices />} />
-                      <Route path="/about/company-overview" element={<CompanyOverview />} />
-                      <Route path="/about/vision-mission" element={<VisionMission />} />
-                      <Route path="/about/leadership" element={<Leadership />} />
-                      <Route path="/about/milestones" element={<Milestones />} />
-                      <Route path="/network-coverage" element={<NetworkCoverage />} />
-                      <Route path="/resources/insights" element={<Insights />} />
-                      <Route path="/resources/insights/:id" element={<ArticleDetail />} />
-                      <Route path="/resources/case-studies" element={<CaseStudies />} />
-                      <Route path="/resources/case-studies/:id" element={<CaseStudyDetail />} />
-                      <Route path="/resources/faq" element={<FAQ />} />
-                      <Route path="/customers" element={<Customers />} />
-                      <Route path="/careers" element={<Careers />} />
-                      <Route path="/contact" element={<Contact />} />
-                      <Route path="/tgcs-project" element={<TGCSProject />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </main>
-                  <ContactBar />
-                  <Footer />
-                </div>
+                  <div className="min-h-screen bg-white flex flex-col">
+                    <Navbar />
+                    <main className="flex-grow">
+                      <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/solutions/:slug" element={<DynamicSolution />} />
+                        <Route path="/about/company-overview" element={<CompanyOverview />} />
+                        <Route path="/about/vision-mission" element={<VisionMission />} />
+                        <Route path="/about/leadership" element={<Leadership />} />
+                        <Route path="/about/milestones" element={<Milestones />} />
+                        <Route path="/network-coverage" element={<NetworkCoverage />} />
+                        <Route path="/resources/insights" element={<Insights />} />
+                        <Route path="/resources/insights/:id" element={<ArticleDetail />} />
+                        <Route path="/customers" element={<Customers />} />
+                        <Route path="/careers" element={<Careers />} />
+                        <Route path="/contact-us" element={<Contact />} />
+                        <Route path="/contact" element={<Navigate to="/contact-us" replace />} />
+                        <Route path="/subsea-cable-system" element={<TGCSProject />} />
+                        <Route path="/tgcs-project" element={<Navigate to="/subsea-cable-system" replace />} />
+                        <Route path="/home" element={<Navigate to="/" replace />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </main>
+                    <ContactBar />
+                    <Footer />
+                  </div>
               }
             />
           </Routes>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle } from 'lucide-react';
+import { getHeroGradient } from '../../components/HeroGradient';
 
 interface MilestoneItem {
   year: string;
@@ -23,6 +24,7 @@ const defaultMilestones: MilestoneItem[] = [
 
 export function Milestones() {
   const [milestones, setMilestones] = useState<MilestoneItem[]>(defaultMilestones);
+  const [heroGradient, setHeroGradient] = useState('blue');
 
   useEffect(() => {
     const load = async () => {
@@ -30,6 +32,7 @@ export function Milestones() {
         const response = await fetch('/api/content/pages/about-milestones');
         if (response.ok) {
           const result = await response.json();
+          if (result.data?.heroGradient) setHeroGradient(result.data.heroGradient);
           if (result.data?.milestones && result.data.milestones.length > 0) {
             const colors = ['orange', 'blue', 'green'];
             setMilestones(
@@ -50,10 +53,10 @@ export function Milestones() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-20">
+      <section className={`${getHeroGradient(heroGradient)} text-white py-20`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-5xl mb-6">Our Milestones</h1>
+            <h1 className="font-bold text-4xl lg:text-5xl mb-6">Our Milestones</h1>
             <p className="text-xl opacity-90">
               A journey of growth, innovation, and commitment to excellence in enterprise connectivity.
             </p>
@@ -91,7 +94,7 @@ export function Milestones() {
                       >
                         {milestone.year}
                       </div>
-                      <h3 className="text-xl mb-2">{milestone.title}</h3>
+                      <h3 className="font-bold text-xl mb-2">{milestone.title}</h3>
                       <p className="text-gray-600">{milestone.description}</p>
                     </div>
                   </div>
@@ -123,7 +126,7 @@ export function Milestones() {
       {/* Future Section */}
       <section className="py-16 bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl mb-4">The Journey Continues</h2>
+          <h2 className="font-bold text-3xl mb-4">The Journey Continues</h2>
           <p className="text-xl opacity-90">
             As we look to the future, we remain committed to innovation, excellence, and delivering the connectivity solutions that empower businesses to succeed in an increasingly digital world.
           </p>

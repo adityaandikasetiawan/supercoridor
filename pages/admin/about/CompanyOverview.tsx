@@ -2,12 +2,14 @@ import { AdminLayout } from '../../../components/AdminLayout';
 import { Save } from 'lucide-react';
 import { useAdminContent } from '../../../hooks/useAdminContent';
 import { ImageUpload } from '../../../components/ImageUpload';
+import { GradientPicker } from '../../../components/GradientPicker';
 
 export function AdminAboutCompanyOverview() {
   const defaultData = {
     title: 'Company Overview',
     subtitle: 'Leading Internet Service Provider in Indonesia',
     heroImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab',
+    heroGradient: 'blue',
     companyDescription:
       'SuperCorridor is a premier Internet Service Provider dedicated to delivering enterprise-grade connectivity solutions across Indonesia. Since our inception, we have been committed to building robust network infrastructure that powers businesses and drives digital transformation.',
     additionalDescription:
@@ -37,6 +39,14 @@ export function AdminAboutCompanyOverview() {
     const newValues = [...formData.values];
     newValues[index] = { ...newValues[index], [field]: value };
     setFormData({ ...formData, values: newValues });
+  };
+
+  const addValue = () => {
+    setFormData({ ...formData, values: [...formData.values, { title: '', description: '' }] });
+  };
+
+  const removeValue = (index: number) => {
+    setFormData({ ...formData, values: formData.values.filter((_, i) => i !== index) });
   };
 
   return (
@@ -81,6 +91,9 @@ export function AdminAboutCompanyOverview() {
                   onChange={(url) => setFormData({ ...formData, heroImage: url })}
                   label="Hero Image"
                 />
+              </div>
+              <div>
+                <GradientPicker value={formData.heroGradient ?? 'blue'} onChange={(v) => setFormData({ ...formData, heroGradient: v })} />
               </div>
               <div>
                 <label className="block text-sm text-gray-700 mb-1">Company Description</label>
@@ -145,11 +158,29 @@ export function AdminAboutCompanyOverview() {
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl text-gray-900 mb-4">Company Values</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl text-gray-900">Company Values</h2>
+              <button
+                type="button"
+                onClick={addValue}
+                className="text-sm text-orange-600 hover:text-orange-700 flex items-center"
+              >
+                + Add Value
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {formData.values.map((value, index) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="text-sm text-gray-700 mb-2">Value {index + 1}</h3>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm text-gray-700">Value {index + 1}</h3>
+                    <button
+                      type="button"
+                      onClick={() => removeValue(index)}
+                      className="text-xs text-red-500 hover:text-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
                   <div className="space-y-2">
                     <input
                       type="text"

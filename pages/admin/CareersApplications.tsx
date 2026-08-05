@@ -49,53 +49,7 @@ interface Application {
 }
 
 export function AdminCareersApplications() {
-  const [applications, setApplications] = useState<Application[]>([
-    {
-      id: '1',
-      applicantName: 'John Doe',
-      email: 'john.doe@email.com',
-      phone: '+62 812 3456 7890',
-      location: 'Jakarta, Indonesia',
-      jobTitle: 'Network Engineer',
-      jobId: '1',
-      appliedDate: '2024-01-20',
-      resumeUrl: '#',
-      coverLetter:
-        'I am writing to express my strong interest in the Network Engineer position...',
-      status: 'new',
-      experience: '5 years',
-    },
-    {
-      id: '2',
-      applicantName: 'Jane Smith',
-      email: 'jane.smith@email.com',
-      phone: '+62 813 9876 5432',
-      location: 'Surabaya, Indonesia',
-      jobTitle: 'Sales Manager',
-      jobId: '2',
-      appliedDate: '2024-01-19',
-      resumeUrl: '#',
-      coverLetter:
-        'With over 7 years of experience in B2B sales, I am excited to apply...',
-      status: 'reviewed',
-      experience: '7 years',
-    },
-    {
-      id: '3',
-      applicantName: 'Ahmad Rahman',
-      email: 'ahmad.rahman@email.com',
-      phone: '+62 815 1234 5678',
-      location: 'Bandung, Indonesia',
-      jobTitle: 'Network Engineer',
-      jobId: '1',
-      appliedDate: '2024-01-18',
-      resumeUrl: '#',
-      coverLetter:
-        'I am passionate about network infrastructure and would love to contribute...',
-      status: 'shortlisted',
-      experience: '6 years',
-    },
-  ]);
+  const [applications, setApplications] = useState<Application[]>([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -123,13 +77,18 @@ export function AdminCareersApplications() {
 
   const persistApplications = async (nextApplications: Application[]) => {
     try {
-      await apiFetch('/api/admin/content/careers/applications', {
+      const res = await apiFetch('/api/admin/content/careers/applications', {
         method: 'PUT',
-        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ applications: nextApplications }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        console.error('Failed to persist applications:', data);
+        alert('Gagal menyimpan perubahan. Silakan refresh dan coba lagi.');
+      }
     } catch (err) {
-      void err;
+      console.error('Network error persisting applications:', err);
+      alert('Gagal menyimpan perubahan. Periksa koneksi internet.');
     }
   };
 
@@ -182,10 +141,9 @@ export function AdminCareersApplications() {
       'Jurusan',
       'IPK',
       'Gaji Diharapkan',
+      'Kapan Bersedia Masuk',
       'Tanggal Melamar',
       'Status',
-      'Kontak Darurat',
-      'No. Kontak Darurat',
     ];
 
     const rows = filteredApplications.map((app, idx) => [
@@ -197,7 +155,7 @@ export function AdminCareersApplications() {
       app.birthPlace ?? '',
       app.birthDate ? new Date(app.birthDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
       app.gender === 'male' ? 'Laki-laki' : app.gender === 'female' ? 'Perempuan' : '',
-      app.maritalStatus === 'single' ? 'Belum Menikah' : app.maritalStatus === 'married' ? 'Menikah' : app.maritalStatus ?? '',
+      app.maritalStatus === 'single' ? 'Belum Menikah' : app.maritalStatus === 'married' ? 'Menikah' : app.maritalStatus === 'divorced' ? 'Cerai Hidup' : app.maritalStatus === 'widowed' ? 'Cerai Mati' : '',
       app.address ?? '',
       app.city ?? '',
       app.postalCode ?? '',
@@ -208,10 +166,9 @@ export function AdminCareersApplications() {
       app.major ?? '',
       app.gpa ?? '',
       app.expectedSalary ?? '',
+      app.availableStartDate ? new Date(app.availableStartDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
       app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
       app.status === 'new' ? 'Baru' : app.status === 'reviewed' ? 'Ditinjau' : app.status === 'shortlisted' ? 'Shortlist' : app.status === 'rejected' ? 'Ditolak' : app.status,
-      app.emergencyName ?? '',
-      app.emergencyPhone ?? '',
     ]);
 
     // Use semicolon separator for better Excel compatibility (Indonesia locale)
@@ -370,6 +327,9 @@ export function AdminCareersApplications() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
+                <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider w-12">
+                  No
+                </th>
                 <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">
                   Applicant
                 </th>
@@ -391,8 +351,11 @@ export function AdminCareersApplications() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredApplications.map((app) => (
+              {filteredApplications.map((app, index) => (
                 <tr key={app.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-4">
+                    <div className="text-sm text-gray-500">{index + 1}</div>
+                  </td>
                   <td className="px-6 py-4">
                     <div>
                       <div className="text-sm text-gray-900">{app.applicantName}</div>
@@ -435,6 +398,28 @@ export function AdminCareersApplications() {
                       >
                         <Eye className="w-4 h-4" />
                       </button>
+                      {app.resumeUrl && app.resumeUrl !== '#' && (
+                        <button
+                          onClick={() => {
+                            const ext = app.resumeUrl.split('.').pop() || 'pdf';
+                            const filename = `job_portal_${app.jobTitle.replace(/\s+/g, '_')}.${ext}`;
+                            fetch(app.resumeUrl)
+                              .then(res => res.blob())
+                              .then(blob => {
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = filename;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              });
+                          }}
+                          className="text-green-600 hover:text-green-700"
+                          title="Download CV"
+                        >
+                          <FileDown className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(app.id)}
                         className="text-red-600 hover:text-red-700"
@@ -642,15 +627,32 @@ export function AdminCareersApplications() {
                   <div className="border-t pt-4">
                     <h3 className="flex items-center gap-2 text-gray-900 mb-2">
                       <Download className="w-5 h-5" />
-                      Resume
+                      Resume / CV
                     </h3>
-                    <a
-                      href={selectedApplication.resumeUrl}
-                      className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download Resume
-                    </a>
+                    {selectedApplication.resumeUrl && selectedApplication.resumeUrl !== '#' ? (
+                      <button
+                        onClick={() => {
+                          const ext = selectedApplication.resumeUrl.split('.').pop() || 'pdf';
+                          const filename = `job_portal_${selectedApplication.jobTitle.replace(/\s+/g, '_')}.${ext}`;
+                          fetch(selectedApplication.resumeUrl)
+                            .then(res => res.blob())
+                            .then(blob => {
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = filename;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            });
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      >
+                        <FileDown className="w-4 h-4" />
+                        Download CV
+                      </button>
+                    ) : (
+                      <p className="text-sm text-gray-400 italic">Tidak ada file CV</p>
+                    )}
                   </div>
 
                   {/* Status Update */}

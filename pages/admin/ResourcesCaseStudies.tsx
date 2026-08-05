@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiFetch } from '../../utils/storage';
 import { ImageUpload } from '../../components/ImageUpload';
 import { RichTextEditor } from '../../components/RichTextEditor';
@@ -57,13 +58,18 @@ export function AdminResourcesCaseStudies() {
 
   const persistCaseStudies = async (nextCaseStudies: CaseStudy[]) => {
     try {
-      await apiFetch('/api/admin/content/resources/case-studies', {
+      const response = await apiFetch('/api/admin/content/resources/case-studies', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ caseStudies: nextCaseStudies }),
       });
-    } catch (err) {
-      void err;
+      if (response.ok) {
+        toast.success('Case study berhasil disimpan!');
+      } else {
+        toast.error('Gagal menyimpan case study.');
+      }
+    } catch {
+      toast.error('Gagal menyimpan. Periksa koneksi internet.');
     }
   };
 

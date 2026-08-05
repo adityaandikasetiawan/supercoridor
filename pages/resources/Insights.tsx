@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, ArrowRight } from 'lucide-react';
+import { Calendar, ArrowRight, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiFetch } from '../../utils/storage';
+import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
+import { usePageContent } from '../../hooks/usePageContent';
+import { getHeroGradient } from '../../components/HeroGradient';
 
 interface Article {
   id: string;
@@ -14,6 +18,48 @@ interface Article {
   image: string;
   color: string;
 }
+
+interface EventItem {
+  id: string;
+  title: string;
+  location: string;
+  date: string;
+  image: string;
+  registrationOpen?: boolean;
+  maxParticipants?: number;
+  formFields?: Array<{ id: string; label: string; type: string; required: boolean; placeholder?: string; options?: string[] }>;
+}
+
+const fallbackEvents: EventItem[] = [
+  {
+    id: 'event-1',
+    title: 'Indonesia Digital Summit 2026',
+    location: 'JCC Senayan | Jakarta',
+    date: 'March 15, 2026',
+    image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80',
+  },
+  {
+    id: 'event-2',
+    title: 'Cloud & Connectivity Expo',
+    location: 'ICE BSD | Tangerang',
+    date: 'April 20, 2026',
+    image: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&q=80',
+  },
+  {
+    id: 'event-3',
+    title: 'Enterprise Network Forum',
+    location: 'Ritz Carlton | Jakarta',
+    date: 'May 8, 2026',
+    image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80',
+  },
+  {
+    id: 'event-4',
+    title: 'Cybersecurity Conference 2026',
+    location: 'Grand Hyatt | Jakarta',
+    date: 'June 12, 2026',
+    image: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&q=80',
+  },
+];
 
 const fallbackArticles: Article[] = [
   {
@@ -84,8 +130,87 @@ const fallbackArticles: Article[] = [
   },
 ];
 
+function RegBanner({ events, onRegister }: { events: EventItem[]; onRegister: (ev: EventItem) => void }) {
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    if (events.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % events.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [events.length]);
+
+  const event = events[current];
+  if (!event) return null;
+
+  return (
+    <section className="relative h-[280px] md:h-[340px] overflow-hidden">
+      {events.map((ev, idx) => (
+        <div
+          key={ev.id}
+          className={`absolute inset-0 transition-opacity duration-700 ${idx === current ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        >
+          <ImageWithFallback
+            src={ev.image}
+            alt={ev.title}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+          <div className="absolute inset-0 flex items-center">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+              <div className="max-w-xl">
+                <span className="inline-block bg-orange-600 text-white text-xs font-medium px-3 py-1 rounded-full mb-3">
+                  Open Registration
+                </span>
+                <h2 className="font-bold text-3xl md:text-4xl text-white mb-3">{ev.title}</h2>
+                <div className="flex items-center gap-4 text-gray-200 text-sm mb-4">
+                  <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{ev.location}</span>
+                  <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{ev.date}</span>
+                </div>
+                <button
+                  onClick={() => onRegister(ev)}
+                  className="inline-flex items-center px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-full font-medium transition-colors"
+                >
+                  Daftar Sekarang
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* Dots */}
+      {events.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+          {events.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrent(idx)}
+              className={`w-2.5 h-2.5 rounded-full transition-all ${idx === current ? 'bg-white w-6' : 'bg-white/50'}`}
+              aria-label={`Go to banner ${idx + 1}`}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function Insights() {
+  const pageHeader = usePageContent('page-insights', {
+    heroTitle: 'Articles & Events',
+    heroSubtitle: 'Expert perspectives on enterprise connectivity, network technology, and digital transformation.',
+    heroGradient: 'green',
+  });
   const [articles, setArticles] = useState<Article[]>(fallbackArticles);
+  const [events, setEvents] = useState<EventItem[]>(fallbackEvents);
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [regModalEvent, setRegModalEvent] = useState<EventItem | null>(null);
+  const [regForm, setRegForm] = useState<Record<string, string>>({});
+  const [regSubmitting, setRegSubmitting] = useState(false);
+  const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,7 +243,6 @@ export function Insights() {
           .filter((a: any) => a.title && a.excerpt);
 
         if (!cancelled && next.length > 0) {
-          // Only replace fallbacks if articles have real content (not server placeholder defaults)
           const hasRealContent = next.some((a: { excerpt: string }) => a.excerpt && !a.excerpt.includes('Full article content'));
           if (hasRealContent || next.length > 2) {
             setArticles(next);
@@ -127,23 +251,210 @@ export function Insights() {
       } catch (err) {
         void err;
       }
+
+      // Load events
+      try {
+        const evRes = await apiFetch('/api/content/pages/page-events');
+        if (evRes.ok) {
+          const evData = await evRes.json();
+          if (!cancelled && evData.data?.events && Array.isArray(evData.data.events) && evData.data.events.length > 0) {
+            setEvents(evData.data.events);
+          }
+        }
+      } catch { /* use defaults */ }
     })();
     return () => {
       cancelled = true;
     };
   }, []);
 
+  const scrollSlider = (direction: 'left' | 'right') => {
+    if (!sliderRef.current) return;
+    const scrollAmount = 400;
+    if (direction === 'right') {
+      const { scrollLeft, scrollWidth, clientWidth } = sliderRef.current;
+      if (scrollLeft + clientWidth >= scrollWidth - 10) {
+        sliderRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        sliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      }
+    } else {
+      const { scrollLeft } = sliderRef.current;
+      if (scrollLeft <= 10) {
+        const { scrollWidth, clientWidth } = sliderRef.current;
+        sliderRef.current.scrollTo({ left: scrollWidth - clientWidth, behavior: 'smooth' });
+      } else {
+        sliderRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      }
+    }
+  };
+
+  // Auto-loop events slider
+  useEffect(() => {
+    const interval = setInterval(() => {
+      scrollSlider('right');
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleRegSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regModalEvent) return;
+    setRegSubmitting(true);
+    try {
+      const res = await fetch(`/api/events/${regModalEvent.id}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: regForm.name ?? regForm['Nama Lengkap'] ?? '',
+          email: regForm.email ?? regForm['Email'] ?? '',
+          phone: regForm.phone ?? regForm['No. Telepon'] ?? '',
+          company: regForm.company ?? regForm['Perusahaan'] ?? '',
+          notes: regForm.notes ?? '',
+          customFields: regForm,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Pendaftaran berhasil! Kami akan menghubungi Anda.');
+        setRegModalEvent(null);
+        setRegForm({});
+      } else {
+        toast.error(data.error === 'Already registered with this email' ? 'Email sudah terdaftar untuk event ini.' : data.error === 'Event is full' ? 'Event sudah penuh.' : 'Pendaftaran gagal. Coba lagi.');
+      }
+    } catch {
+      toast.error('Pendaftaran gagal. Periksa koneksi internet.');
+    } finally {
+      setRegSubmitting(false);
+    }
+  };
+
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-r from-green-600 to-green-700 text-white py-20">
+      <section className={`${getHeroGradient(pageHeader.heroGradient)} text-white py-20`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-5xl mb-6">Insights & Articles</h1>
+            <h1 className="font-bold text-4xl lg:text-5xl mb-6">{pageHeader.heroTitle}</h1>
             <p className="text-xl opacity-90">
-              Expert perspectives on enterprise connectivity, network technology, and digital transformation.
+              {pageHeader.heroSubtitle}
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Registration Open Banner Slider */}
+      {(() => {
+        const regEvents = events.filter(ev => ev.registrationOpen);
+        if (regEvents.length === 0) return null;
+        return <RegBanner events={regEvents} onRegister={(ev) => setRegModalEvent(ev)} />;
+      })()}
+
+      {/* Events Slider */}
+      <section className="py-12 bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold text-2xl text-white">Events</h2>
+          </div>
+          {/* Year Filter */}
+          <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2">
+            <button
+              onClick={() => { setSelectedYear('all'); sliderRef.current?.scrollTo({ left: 0, behavior: 'smooth' }); }}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${selectedYear === 'all' ? 'bg-orange-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
+            >
+              Semua
+            </button>
+            {(() => {
+              const years = [...new Set(events.map(ev => {
+                const match = ev.date.match(/\b(20\d{2})\b/);
+                return match ? match[1] : null;
+              }).filter(Boolean) as string[])].sort((a, b) => Number(b) - Number(a));
+              return years.map(year => (
+                <button
+                  key={year}
+                  onClick={() => { setSelectedYear(year); sliderRef.current?.scrollTo({ left: 0, behavior: 'smooth' }); }}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${selectedYear === year ? 'bg-orange-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
+                >
+                  {year}
+                </button>
+              ));
+            })()}
+          </div>
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Left Arrow */}
+          <button
+            onClick={() => scrollSlider('left')}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/10 hover:bg-white/30 backdrop-blur-sm rounded-full text-white transition-colors"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+
+          {/* Slider */}
+          <div
+            ref={sliderRef}
+            className="flex gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory mx-12 pb-4"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {[...events]
+              .filter(ev => {
+                if (selectedYear === 'all') return true;
+                const match = ev.date.match(/\b(20\d{2})\b/);
+                return match ? match[1] === selectedYear : false;
+              })
+              .sort((a, b) => {
+                const dateA = new Date(a.date).getTime();
+                const dateB = new Date(b.date).getTime();
+                if (isNaN(dateA) && isNaN(dateB)) return 0;
+                if (isNaN(dateA)) return 1;
+                if (isNaN(dateB)) return -1;
+                return dateA - dateB;
+              }).map((event) => (
+              <div
+                key={event.id}
+                className="relative flex-shrink-0 w-[320px] md:w-[420px] h-[260px] rounded-2xl overflow-hidden snap-start group cursor-pointer"
+              >
+                <ImageWithFallback
+                  src={event.image}
+                  alt={event.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-bold text-xl text-white">{event.title}</h3>
+                    {event.registrationOpen && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setRegModalEvent(event); }}
+                        className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium rounded-full transition-colors"
+                      >
+                        Register
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-200 text-sm mb-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span>{event.location}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-300 text-sm">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>{event.date}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Right Arrow */}
+          <button
+            onClick={() => scrollSlider('right')}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/10 hover:bg-white/30 backdrop-blur-sm rounded-full text-white transition-colors"
+            aria-label="Scroll right"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
         </div>
       </section>
 
@@ -172,7 +483,7 @@ export function Insights() {
                 </div>
                 {/* Content */}
                 <div className="p-5">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors">{article.title}</h3>
+                  <h3 className="font-bold text-lg font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors">{article.title}</h3>
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2">{article.excerpt}</p>
                   <div className="flex items-center justify-between text-xs text-gray-500">
                     <div className="flex items-center gap-1">
@@ -193,7 +504,7 @@ export function Insights() {
       {/* Newsletter CTA */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl mb-4">Stay Informed</h2>
+          <h2 className="font-bold text-3xl mb-4">Stay Informed</h2>
           <p className="text-xl text-gray-600 mb-6">
             Subscribe to our newsletter for the latest insights on enterprise connectivity and network technology.
           </p>
@@ -209,6 +520,77 @@ export function Insights() {
           </div>
         </div>
       </section>
+
+      {/* Registration Modal */}
+      {regModalEvent && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="p-6">
+              <div className="mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Event Registration</h2>
+                <p className="text-sm text-gray-600 mt-1">{regModalEvent.title}</p>
+                <p className="text-xs text-gray-500">{regModalEvent.date} • {regModalEvent.location}</p>
+              </div>
+              <form onSubmit={handleRegSubmit} className="space-y-4">
+                {(regModalEvent.formFields && regModalEvent.formFields.length > 0
+                  ? regModalEvent.formFields
+                  : [
+                      { id: 'name', label: 'Nama Lengkap', type: 'text', required: true, placeholder: 'John Doe' },
+                      { id: 'email', label: 'Email', type: 'email', required: true, placeholder: 'john@company.com' },
+                      { id: 'phone', label: 'No. Telepon', type: 'tel', required: false, placeholder: '08123456789' },
+                      { id: 'company', label: 'Perusahaan', type: 'text', required: false, placeholder: 'PT ABC' },
+                    ]
+                ).map((field) => (
+                  <div key={field.id}>
+                    <label className="block text-sm text-gray-700 mb-1">
+                      {field.label} {field.required && <span className="text-red-500">*</span>}
+                    </label>
+                    {field.type === 'textarea' ? (
+                      <textarea
+                        required={field.required}
+                        value={regForm[field.id] ?? ''}
+                        onChange={(e) => setRegForm({ ...regForm, [field.id]: e.target.value })}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder={field.placeholder}
+                      />
+                    ) : field.type === 'select' ? (
+                      <select
+                        required={field.required}
+                        value={regForm[field.id] ?? ''}
+                        onChange={(e) => setRegForm({ ...regForm, [field.id]: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      >
+                        <option value="">{field.placeholder || 'Pilih...'}</option>
+                        {(field.options ?? []).map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={field.type || 'text'}
+                        required={field.required}
+                        value={regForm[field.id] ?? ''}
+                        onChange={(e) => setRegForm({ ...regForm, [field.id]: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder={field.placeholder}
+                      />
+                    )}
+                  </div>
+                ))}
+                <div className="flex gap-3 pt-2">
+                  <button type="submit" disabled={regSubmitting} className="flex-1 bg-orange-600 text-white py-2.5 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 font-medium">
+                    {regSubmitting ? 'Mendaftar...' : 'Daftar Sekarang'}
+                  </button>
+                  <button type="button" onClick={() => { setRegModalEvent(null); setRegForm({}); }} className="flex-1 bg-gray-200 text-gray-700 py-2.5 rounded-lg hover:bg-gray-300 transition-colors">
+                    Batal
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

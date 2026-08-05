@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
+import { usePageContent } from '../hooks/usePageContent';
+import { getHeroGradient } from '../components/HeroGradient';
 
 export function Contact() {
+  const pageContent = usePageContent('page-contact', {
+    heroTitle: 'Contact Us',
+    heroSubtitle: 'Get in touch with our team to discuss your enterprise connectivity needs.',
+    heroGradient: 'orange',
+  });
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -56,12 +63,12 @@ export function Contact() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-20">
+      <section className={`${getHeroGradient(pageContent.heroGradient)} text-white py-20`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-5xl mb-6">Contact Us</h1>
+            <h1 className="font-bold text-4xl lg:text-5xl mb-6">{pageContent.heroTitle}</h1>
             <p className="text-xl opacity-90">
-              Get in touch with our team to discuss your enterprise connectivity needs.
+              {pageContent.heroSubtitle}
             </p>
           </div>
         </div>
@@ -73,7 +80,7 @@ export function Contact() {
           <div className="grid lg:grid-cols-2 gap-12">
             {/* Contact Form */}
             <div>
-              <h2 className="text-3xl mb-6">Send Us a Message</h2>
+              <h2 className="font-bold text-3xl mb-6">Send Us a Message</h2>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label htmlFor="name" className="block mb-2 text-gray-700">
@@ -194,14 +201,14 @@ export function Contact() {
 
             {/* Contact Information */}
             <div>
-              <h2 className="text-3xl mb-6">Get in Touch</h2>
+              <h2 className="font-bold text-3xl mb-6">Get in Touch</h2>
               <div className="space-y-6 mb-8">
                 <div className="flex items-start">
                   <div className="flex-shrink-0 w-12 h-12 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mr-4">
                     <MapPin className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="mb-2">Head Office</h3>
+                    <h3 className="font-bold mb-2">Head Office</h3>
                     <p className="text-gray-600">
                       Artha Gading Niaga Blok E 11, 12, 15A<br />
                       Kelapa Gading, Jakarta 14240<br />
@@ -215,7 +222,7 @@ export function Contact() {
                     <Phone className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="mb-2">Phone</h3>
+                    <h3 className="font-bold mb-2">Phone</h3>
                     <p className="text-gray-600">021-4587 8409</p>
                   </div>
                 </div>
@@ -225,7 +232,7 @@ export function Contact() {
                     <Mail className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="mb-2">Email</h3>
+                    <h3 className="font-bold mb-2">Email</h3>
                     <p className="text-gray-600">ask@supercorridor.co.id</p>
                   </div>
                 </div>
@@ -235,7 +242,7 @@ export function Contact() {
                     <Clock className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="mb-2">Business Hours</h3>
+                    <h3 className="font-bold mb-2">Business Hours</h3>
                     <p className="text-gray-600">
                       Monday - Friday: 8:00 AM - 5:00 PM<br />
                       {/* Saturday: 9:00 AM - 1:00 PM<br /> */}
@@ -247,7 +254,7 @@ export function Contact() {
 
               {/* Regional Offices */}
               <div className="bg-gray-50 p-6 rounded-lg">
-                <h3 className="text-xl mb-4">Regional Offices</h3>
+                <h3 className="font-bold text-xl mb-4">Regional Offices</h3>
                 <div className="space-y-3 text-gray-700">
                   <div>
                     <div className="text-blue-600">Surabaya</div>

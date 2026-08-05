@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, Quote } from 'lucide-react';
+import { usePageContent } from '../hooks/usePageContent';
+import { getHeroGradient } from '../components/HeroGradient';
 
 interface Testimonial {
   id: string;
@@ -80,6 +82,11 @@ const defaultIndustries = [
 ];
 
 export function Customers() {
+  const pageContent = usePageContent('page-customers', {
+    heroTitle: 'Our Customers',
+    heroSubtitle: 'Trusted by leading enterprises across diverse industries to power their digital infrastructure.',
+    heroGradient: 'blue',
+  });
   const [testimonials, setTestimonials] = useState(defaultTestimonials);
   const [industries, setIndustries] = useState(defaultIndustries);
 
@@ -121,12 +128,12 @@ export function Customers() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-20">
+      <section className={`${getHeroGradient(pageContent.heroGradient)} text-white py-20`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-5xl mb-6">Our Customers</h1>
+            <h1 className="font-bold text-4xl lg:text-5xl mb-6">{pageContent.heroTitle}</h1>
             <p className="text-xl opacity-90">
-              Trusted by leading enterprises across diverse industries to power their digital infrastructure.
+              {pageContent.heroSubtitle}
             </p>
           </div>
         </div>
@@ -156,7 +163,7 @@ export function Customers() {
 
           {/* Industries Served */}
           <div className="mb-16">
-            <h2 className="text-3xl mb-8 text-center">Industries We Serve</h2>
+            <h2 className="font-bold text-3xl mb-8 text-center">Industries We Serve</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {industries.map((industry, index) => (
                 <div
@@ -175,7 +182,7 @@ export function Customers() {
       {/* Testimonials */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl mb-12 text-center">What Our Customers Say</h2>
+          <h2 className="font-bold text-3xl mb-12 text-center">What Our Customers Say</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
               <div key={index} className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow">
@@ -215,12 +222,12 @@ export function Customers() {
       {/* CTA */}
       <section className="py-16 bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl mb-4">Join Our Growing Customer Base</h2>
+          <h2 className="font-bold text-3xl mb-4">Join Our Growing Customer Base</h2>
           <p className="text-xl opacity-90 mb-6">
             Discover why leading enterprises trust SuperCorridor for their connectivity needs.
           </p>
           <Link
-            to="/contact"
+            to="/contact-us"
             className="inline-block bg-white text-blue-600 px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors"
           >
             Get Started Today

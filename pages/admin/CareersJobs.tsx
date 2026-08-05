@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Plus, Edit, Trash2, Search, MapPin, Briefcase, Clock } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiFetch } from '../../utils/storage';
+import { GradientPicker } from '../../components/GradientPicker';
 
 interface Job {
   id: string;
@@ -59,6 +61,11 @@ export function AdminCareersJobs() {
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Page header state
+  const [heroTitle, setHeroTitle] = useState('Join Our Team');
+  const [heroSubtitle, setHeroSubtitle] = useState('Build the future of connectivity with us. We are looking for talented people who share our passion for innovation.');
+  const [heroGradient, setHeroGradient] = useState('orange-blue-green');
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -72,6 +79,16 @@ export function AdminCareersJobs() {
       } catch (err) {
         void err;
       }
+      // Load page header
+      try {
+        const headerRes = await apiFetch('/api/admin/content/pages/page-careers', { method: 'GET' });
+        if (headerRes.ok) {
+          const headerData = await headerRes.json();
+          if (!cancelled && headerData.data?.heroTitle) setHeroTitle(headerData.data.heroTitle);
+          if (!cancelled && headerData.data?.heroSubtitle) setHeroSubtitle(headerData.data.heroSubtitle);
+          if (!cancelled && headerData.data?.heroGradient) setHeroGradient(headerData.data.heroGradient);
+        }
+      } catch { /* ignore */ }
     })();
     return () => {
       cancelled = true;
@@ -80,13 +97,18 @@ export function AdminCareersJobs() {
 
   const persistJobs = async (nextJobs: Job[]) => {
     try {
-      await apiFetch('/api/admin/content/careers/jobs', {
+      const response = await apiFetch('/api/admin/content/careers/jobs', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ jobs: nextJobs }),
       });
-    } catch (err) {
-      void err;
+      if (response.ok) {
+        toast.success('Job berhasil disimpan!');
+      } else {
+        toast.error('Gagal menyimpan job.');
+      }
+    } catch {
+      toast.error('Gagal menyimpan. Periksa koneksi internet.');
     }
   };
 
@@ -190,6 +212,31 @@ export function AdminCareersJobs() {
             <Plus className="w-5 h-5 mr-2" />
             Add Job
           </button>
+        </div>
+
+        {/* Page Header Section */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg text-gray-900">Page Header</h2>
+            <button onClick={async () => {
+              const res = await apiFetch('/api/admin/content/pages/page-careers', { method: 'PUT', body: JSON.stringify({ data: { heroTitle, heroSubtitle, heroGradient } }) });
+              if (res.ok) toast.success('Page header berhasil disimpan!');
+              else toast.error('Gagal menyimpan page header.');
+            }} className="text-sm text-orange-600 hover:text-orange-700 font-medium">Save Header</button>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Title</label>
+              <input type="text" value={heroTitle} onChange={(e) => setHeroTitle(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Subtitle</label>
+              <input type="text" value={heroSubtitle} onChange={(e) => setHeroSubtitle(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <GradientPicker value={heroGradient} onChange={setHeroGradient} />
+          </div>
         </div>
 
         {/* Stats */}

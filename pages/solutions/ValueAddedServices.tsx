@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Shield, Lock, Settings, BarChart, HeadphonesIcon, ArrowRight } from 'lucide-react';
 import { usePageContent } from '../../hooks/usePageContent';
+import { getHeroGradient } from '../../components/HeroGradient';
 
 export function ValueAddedServices() {
   const content = usePageContent('solutions-value-added-services', {
@@ -59,7 +60,7 @@ export function ValueAddedServices() {
       <section className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-5xl mb-6">{content.title}</h1>
+            <h1 className="font-bold text-4xl lg:text-5xl mb-6">{content.title}</h1>
             <p className="text-xl opacity-90">{content.subtitle}</p>
           </div>
         </div>
@@ -82,7 +83,7 @@ export function ValueAddedServices() {
                   <div className={`inline-flex items-center justify-center w-16 h-16 ${iconBg} rounded-full mb-4`}>
                     <Icon className="w-8 h-8" />
                   </div>
-                  <h3 className="text-2xl mb-3">{service.title}</h3>
+                  <h3 className="font-bold text-2xl mb-3">{service.title}</h3>
                   <p className="text-gray-600 mb-4">{service.description}</p>
                   <ul className="space-y-2 text-gray-700">
                     {service.bullets.map((bullet, bIndex) => (
@@ -99,7 +100,7 @@ export function ValueAddedServices() {
 
           {/* Benefits Section */}
           <div className="bg-gradient-to-r from-orange-50 to-blue-50 rounded-lg p-8 mb-16">
-            <h2 className="text-3xl mb-6 text-center">Why Add These Services?</h2>
+            <h2 className="font-bold text-3xl mb-6 text-center">Why Add These Services?</h2>
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               {content.benefits.map((benefit, index) => {
                 const color = colorCycle[index % 3];
@@ -116,10 +117,10 @@ export function ValueAddedServices() {
 
           {/* CTA */}
           <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg p-8 text-center">
-            <h2 className="text-3xl mb-4">{content.ctaTitle}</h2>
+            <h2 className="font-bold text-3xl mb-4">{content.ctaTitle}</h2>
             <p className="text-xl opacity-90 mb-6">{content.ctaDescription}</p>
             <Link
-              to="/contact"
+              to="/contact-us"
               className="inline-flex items-center bg-white text-orange-600 px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors"
             >
               {content.ctaButtonText}

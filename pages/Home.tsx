@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Zap, Shield, Network, Headphones, Smartphone, ChevronRight, ChevronLeft, Cable } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
+import { AnimatedStat } from '../components/AnimatedStat';
 
 interface HeroSlide {
   id: number;
@@ -22,7 +23,7 @@ export function Home() {
       subtitle: 'Across Indonesia',
       description: 'Enterprise-grade internet solutions with 99.99% uptime guarantee',
       ctaText: 'Get Started',
-      ctaLink: '/contact',
+      ctaLink: '/contact-us',
       backgroundImage: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80',
       order: 1,
     },
@@ -88,49 +89,90 @@ export function Home() {
       image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80',
     },
   });
+
   const [tgcsData, setTgcsData] = useState(() => ({
     hero: {
-      title: 'SuperCorridor TGCS',
-      subtitle: 'Trans Global Cable System',
-      description:
-        'Asia’s pioneering 24 fiber pair repeated submarine system, A next-generation hyperscale subsea infrastructure, future proofing regional connectivity for the digital era',
+      title: '',
+      subtitle: '',
+      description: '',
       enabled: true,
     },
     statistics: {
-      cableLength: '1,200+ KM',
-      fiberPairs: '12',
-      capacity: '480 Tbps',
-      rfsSchedule: 'Q2 2025',
+      cableLength: '',
+      fiberPairs: '',
+      capacity: '',
+      rfsSchedule: '',
     },
   }));
 
   useEffect(() => {
     const load = async () => {
-      const [slidesRes, tgcsRes, homeRes] = await Promise.all([
-        fetch('/api/content/hero-slides'),
-        fetch('/api/content/tgcs'),
-        fetch('/api/content/home-management'),
-      ]);
-      if (slidesRes.ok) {
-        const data = (await slidesRes.json()) as { ok: true; heroSlides: HeroSlide[] };
-        setHeroSlides(data.heroSlides);
-        setCurrentSlide((prev) => Math.min(prev, Math.max(data.heroSlides.length - 1, 0)));
-      }
-      if (tgcsRes.ok) {
-        const data = (await tgcsRes.json()) as { ok: true; tgcs: typeof tgcsData };
-        setTgcsData(data.tgcs);
-      }
-      if (homeRes.ok) {
-        const data = (await homeRes.json()) as { ok: true; homeManagement: { heroData: { title: string; subtitle: string; ctaText: string; ctaLink: string; backgroundImage: string }; stats: { label: string; value: string; suffix: string }[]; features?: { title: string; description: string }[]; solutionsSection?: typeof solutionsSection } | null };
-        if (data.homeManagement?.stats) {
-          setHomeStats(data.homeManagement.stats);
+      const cacheBust = `_t=${Date.now()}`;
+      try {
+        const [slidesRes, tgcsRes, homeRes] = await Promise.all([
+          fetch(`/api/content/hero-slides?${cacheBust}`, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } }),
+          fetch(`/api/content/tgcs?${cacheBust}`, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } }),
+          fetch(`/api/content/home-management?${cacheBust}`, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } }),
+        ]);
+        if (slidesRes.ok) {
+          const data = (await slidesRes.json()) as { ok: true; heroSlides: HeroSlide[] };
+          setHeroSlides(data.heroSlides);
+          setCurrentSlide((prev) => Math.min(prev, Math.max(data.heroSlides.length - 1, 0)));
         }
-        if (data.homeManagement?.features && data.homeManagement.features.length > 0) {
-          setHomeFeatures(data.homeManagement.features);
+        if (tgcsRes.ok) {
+          const data = await tgcsRes.json();
+          if (data.tgcs) {
+            setTgcsData(prev => ({
+              hero: { ...prev.hero, ...data.tgcs.hero },
+              statistics: { ...prev.statistics, ...data.tgcs.statistics },
+            }));
+          }
+        } else {
+          // Retry TGCS fetch if failed
+          const retryRes = await fetch(`/api/content/tgcs?_t=${Date.now()}`);
+          if (retryRes.ok) {
+            const data = await retryRes.json();
+            if (data.tgcs) {
+              setTgcsData(prev => ({
+                hero: { ...prev.hero, ...data.tgcs.hero },
+                statistics: { ...prev.statistics, ...data.tgcs.statistics },
+              }));
+            }
+          }
         }
-        if (data.homeManagement?.solutionsSection) {
-          setSolutionsSection(prev => ({ ...prev, ...data.homeManagement!.solutionsSection }));
+        if (homeRes.ok) {
+          const data = (await homeRes.json()) as { ok: true; homeManagement: { heroData: { title: string; subtitle: string; ctaText: string; ctaLink: string; backgroundImage: string }; stats: { label: string; value: string; suffix: string }[]; features?: { title: string; description: string }[]; solutionsSection?: typeof solutionsSection } | null };
+          if (data.homeManagement?.stats) {
+            setHomeStats(data.homeManagement.stats);
+          }
+          if (data.homeManagement?.features && data.homeManagement.features.length > 0) {
+            setHomeFeatures(data.homeManagement.features);
+          }
+          if (data.homeManagement?.solutionsSection) {
+            const ss = data.homeManagement.solutionsSection;
+            setSolutionsSection(prev => ({
+              ...prev,
+              ...ss,
+              // Deep merge small & enterprise tabs so cards/image are fully replaced
+              small: ss.small ? { ...prev.small, ...ss.small, cards: ss.small.cards ?? prev.small.cards } : prev.small,
+              enterprise: ss.enterprise ? { ...prev.enterprise, ...ss.enterprise, cards: ss.enterprise.cards ?? prev.enterprise.cards } : prev.enterprise,
+            }));
+          }
         }
+      } catch (e) {
+        // Retry TGCS fetch on network error
+        try {
+          const retryRes = await fetch(`/api/content/tgcs?_t=${Date.now()}`);
+          if (retryRes.ok) {
+            const data = await retryRes.json();
+            if (data.tgcs) {
+              setTgcsData(prev => ({
+                hero: { ...prev.hero, ...data.tgcs.hero },
+                statistics: { ...prev.statistics, ...data.tgcs.statistics },
+              }));
+            }
+          }
+        } catch (_) { /* ignore */ }
       }
     };
     void load();
@@ -174,8 +216,8 @@ export function Home() {
 
             <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
               <div className="text-white max-w-2xl">
-                <h1 className="text-5xl lg:text-6xl mb-4">{slide.title}</h1>
-                <h2 className="text-3xl lg:text-4xl mb-6">{slide.subtitle}</h2>
+                <h1 className="font-bold text-5xl lg:text-6xl mb-4">{slide.title}</h1>
+                <h2 className="font-bold text-3xl lg:text-4xl mb-6">{slide.subtitle}</h2>
                 <p className="text-xl mb-8 text-gray-200">{slide.description}</p>
                 <Link
                   to={slide.ctaLink}
@@ -221,7 +263,7 @@ export function Home() {
       </section>
 
       {/* Flagship Project Section - TGCS */}
-      {tgcsData.hero.enabled && (
+      {tgcsData.hero.enabled && tgcsData.statistics.cableLength && (
         <section className="py-12 bg-gradient-to-br from-blue-900 via-blue-800 to-teal-800 text-white relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute inset-0" style={{
@@ -239,11 +281,11 @@ export function Home() {
                   <Cable className="w-4 h-4" />
                   <span className="text-xs">Flagship Project</span>
                 </div>
-                <h2 className="text-3xl lg:text-4xl mb-2">{tgcsData.hero.title}</h2>
+                <h2 className="font-bold text-3xl lg:text-4xl mb-2">{tgcsData.hero.title}</h2>
                 <p className="text-lg text-blue-100 mb-2">{tgcsData.hero.subtitle}</p>
                 <p className="text-sm text-blue-200 mb-6">{tgcsData.hero.description}</p>
                 <Link
-                  to="/tgcs-project"
+                  to="/subsea-cable-system"
                   className="inline-flex items-center px-6 py-3 bg-white text-blue-900 rounded-full hover:bg-gray-100 transition-colors"
                 >
                   Find Out More
@@ -254,19 +296,19 @@ export function Home() {
               {/* Right Statistics */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center border border-white/20">
-                  <div className="text-3xl mb-1 text-orange-400">{tgcsData.statistics.cableLength}</div>
+                  <AnimatedStat value={tgcsData.statistics.cableLength} className="text-3xl mb-1 text-orange-400" />
                   <div className="text-xs text-blue-100">Cable Length</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center border border-white/20">
-                  <div className="text-3xl mb-1 text-orange-400">{tgcsData.statistics.fiberPairs}</div>
+                  <AnimatedStat value={tgcsData.statistics.fiberPairs} className="text-3xl mb-1 text-orange-400" />
                   <div className="text-xs text-blue-100">Fiber Pairs</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center border border-white/20">
-                  <div className="text-3xl mb-1 text-orange-400">{tgcsData.statistics.capacity}</div>
-                  <div className="text-xs text-blue-100">20 Tbps Per Fiber Pair</div>
+                  <AnimatedStat value={tgcsData.statistics.capacity} className="text-3xl mb-1 text-orange-400" />
+                  <div className="text-xs text-blue-100">Total Capacity</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center border border-white/20">
-                  <div className="text-3xl mb-1 text-orange-400">{tgcsData.statistics.rfsSchedule}</div>
+                  <AnimatedStat value={tgcsData.statistics.rfsSchedule} className="text-3xl mb-1 text-orange-400" />
                   <div className="text-xs text-blue-100">RFS Schedule</div>
                 </div>
               </div>
@@ -279,7 +321,7 @@ export function Home() {
       <section className="py-16 lg:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl text-gray-900 mb-4">{solutionsSection.title}</h2>
+            <h2 className="font-bold text-3xl lg:text-4xl text-gray-900 mb-4">{solutionsSection.title}</h2>
             <p className="text-xl text-gray-600">{solutionsSection.subtitle}</p>
           </div>
 
@@ -316,7 +358,7 @@ export function Home() {
                     <span className="inline-block bg-blue-600 text-white px-3 py-1 text-sm mb-3 rounded">
                       {solutionsSection.small.featuredBadge}
                     </span>
-                    <h3 className="text-2xl mb-3">{solutionsSection.small.featuredTitle}</h3>
+                    <h3 className="font-bold text-2xl mb-3">{solutionsSection.small.featuredTitle}</h3>
                     <p className="text-gray-700 mb-4">{solutionsSection.small.featuredDesc}</p>
                     <Link to={solutionsSection.small.featuredLink} className="inline-flex items-center text-blue-600 hover:text-blue-700">
                       Learn more
@@ -326,14 +368,14 @@ export function Home() {
 
                   <div className="grid sm:grid-cols-2 gap-4">
                     {solutionsSection.small.cards.map((card, idx) => (
-                      <div key={idx} className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-blue-500 transition-colors">
+                      <Link key={idx} to={card.link} className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-blue-500 transition-colors block">
                         {card.icon === 'Shield' ? <Shield className="w-8 h-8 text-blue-600 mb-3" /> : card.icon === 'Network' ? <Network className="w-8 h-8 text-blue-600 mb-3" /> : card.icon === 'Zap' ? <Zap className="w-8 h-8 text-blue-600 mb-3" /> : card.icon === 'Headphones' ? <Headphones className="w-8 h-8 text-blue-600 mb-3" /> : card.icon === 'Cable' ? <Cable className="w-8 h-8 text-blue-600 mb-3" /> : <Smartphone className="w-8 h-8 text-blue-600 mb-3" />}
                         <h4 className="text-lg mb-2">{card.title}</h4>
                         <p className="text-gray-600 text-sm mb-3">{card.desc}</p>
-                        <Link to={card.link} className="text-blue-600 text-sm inline-flex items-center">
+                        <span className="text-blue-600 text-sm inline-flex items-center">
                           Learn more <ChevronRight className="w-3 h-3 ml-1" />
-                        </Link>
-                      </div>
+                        </span>
+                      </Link>
                     ))}
                   </div>
 
@@ -343,7 +385,7 @@ export function Home() {
                   <ImageWithFallback
                     src={solutionsSection.small.image}
                     alt="Small Business"
-                    className="rounded-2xl shadow-lg w-full h-full object-cover"
+                    className="rounded-2xl w-full h-full object-cover"
                   />
                 </div>
               </div>
@@ -356,7 +398,7 @@ export function Home() {
                     <span className="inline-block bg-orange-600 text-white px-3 py-1 text-sm mb-3 rounded">
                       {solutionsSection.enterprise.featuredBadge}
                     </span>
-                    <h3 className="text-2xl mb-3">{solutionsSection.enterprise.featuredTitle}</h3>
+                    <h3 className="font-bold text-2xl mb-3">{solutionsSection.enterprise.featuredTitle}</h3>
                     <p className="text-gray-700 mb-4">{solutionsSection.enterprise.featuredDesc}</p>
                     <Link to={solutionsSection.enterprise.featuredLink} className="inline-flex items-center text-orange-600 hover:text-orange-700">
                       Learn more
@@ -366,17 +408,17 @@ export function Home() {
 
                   <div className="grid sm:grid-cols-2 gap-4">
                     {solutionsSection.enterprise.cards.map((card, idx) => (
-                      <div key={idx} className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-orange-500 transition-colors">
+                      <Link key={idx} to={card.link} className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-orange-500 transition-colors block">
                         {'badge' in card && card.badge && (
                           <span className="inline-block bg-orange-600 text-white px-2 py-1 text-xs mb-2 rounded">{card.badge}</span>
                         )}
                         {card.icon === 'Zap' ? <Zap className="w-8 h-8 text-orange-600 mb-3" /> : card.icon === 'Shield' ? <Shield className="w-8 h-8 text-orange-600 mb-3" /> : card.icon === 'Smartphone' ? <Smartphone className="w-8 h-8 text-orange-600 mb-3" /> : card.icon === 'Headphones' ? <Headphones className="w-8 h-8 text-orange-600 mb-3" /> : card.icon === 'Cable' ? <Cable className="w-8 h-8 text-orange-600 mb-3" /> : <Network className="w-8 h-8 text-orange-600 mb-3" />}
                         <h4 className="text-lg mb-2">{card.title}</h4>
                         <p className="text-gray-600 text-sm mb-3">{card.desc}</p>
-                        <Link to={card.link} className="text-orange-600 text-sm inline-flex items-center">
+                        <span className="text-orange-600 text-sm inline-flex items-center">
                           Learn more <ChevronRight className="w-3 h-3 ml-1" />
-                        </Link>
-                      </div>
+                        </span>
+                      </Link>
                     ))}
                   </div>
 
@@ -386,7 +428,7 @@ export function Home() {
                   <ImageWithFallback
                     src={solutionsSection.enterprise.image}
                     alt="Enterprise"
-                    className="rounded-2xl shadow-lg w-full h-full object-cover"
+                    className="rounded-2xl w-full h-full object-cover"
                   />
                 </div>
               </div>
@@ -400,7 +442,7 @@ export function Home() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {homeStats.map((stat, index) => (
               <div key={index} className="text-center">
-                <div className="text-3xl lg:text-4xl text-orange-600 mb-1">{stat.value}</div>
+                <AnimatedStat value={stat.value} className="text-3xl lg:text-4xl text-orange-600 mb-1" />
                 <div className="text-gray-600">{stat.label}</div>
                 <div className="text-sm text-gray-500">{stat.suffix}</div>
               </div>
@@ -413,7 +455,7 @@ export function Home() {
       <section className="py-16 lg:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl text-gray-900 mb-4">Why Choose SuperCorridor</h2>
+            <h2 className="font-bold text-3xl lg:text-4xl text-gray-900 mb-4">Why Choose SuperCorridor</h2>
             <p className="text-xl text-gray-600">Industry-leading infrastructure and support</p>
           </div>
 
@@ -434,7 +476,7 @@ export function Home() {
                   <div className={`w-16 h-16 ${color.bg} rounded-full flex items-center justify-center mb-4`}>
                     <Icon className={`w-8 h-8 ${color.text}`} />
                   </div>
-                  <h3 className="text-xl text-gray-900 mb-3">{feature.title}</h3>
+                  <h3 className="font-bold text-xl text-gray-900 mb-3">{feature.title}</h3>
                   <p className="text-gray-600">{feature.description}</p>
                 </div>
               );
@@ -446,11 +488,11 @@ export function Home() {
       {/* CTA Section */}
       <section className="py-16 lg:py-20 bg-gradient-to-r from-orange-600 to-orange-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl lg:text-4xl mb-4">Ready to Transform Your Connectivity?</h2>
+          <h2 className="font-bold text-3xl lg:text-4xl mb-4">Ready to Transform Your Connectivity?</h2>
           <p className="text-xl mb-8 text-orange-100">Get started with SuperCorridor today</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              to="/contact"
+              to="/contact-us"
               className="inline-flex items-center justify-center px-8 py-4 bg-white text-orange-600 rounded-full hover:bg-gray-100 transition-colors"
             >
               Contact Sales

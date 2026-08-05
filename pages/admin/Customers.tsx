@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Plus, Edit, Trash2, MoveUp, MoveDown, Eye, EyeOff } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiFetch } from '../../utils/storage';
 import { ImageUpload } from '../../components/ImageUpload';
+import { GradientPicker } from '../../components/GradientPicker';
 
 interface Customer {
   id: string;
@@ -28,6 +30,11 @@ export function AdminCustomers() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Page header state
+  const [heroTitle, setHeroTitle] = useState('Our Customers');
+  const [heroSubtitle, setHeroSubtitle] = useState('Trusted by leading enterprises across diverse industries to power their digital infrastructure.');
+  const [heroGradient, setHeroGradient] = useState('blue');
+
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isTestimonialModalOpen, setIsTestimonialModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -44,6 +51,14 @@ export function AdminCustomers() {
             setCustomers(data.customers.customers ?? []);
             setTestimonials(data.customers.testimonials ?? []);
           }
+        }
+        // Load page header
+        const headerRes = await apiFetch('/api/admin/content/pages/page-customers', { method: 'GET' });
+        if (headerRes.ok) {
+          const headerData = await headerRes.json();
+          if (headerData.data?.heroTitle) setHeroTitle(headerData.data.heroTitle);
+          if (headerData.data?.heroSubtitle) setHeroSubtitle(headerData.data.heroSubtitle);
+          if (headerData.data?.heroGradient) setHeroGradient(headerData.data.heroGradient);
         }
       } catch {
         // use defaults
@@ -62,6 +77,9 @@ export function AdminCustomers() {
     if (response.ok) {
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
+      toast.success('Berhasil disimpan!');
+    } else {
+      toast.error('Gagal menyimpan. Coba lagi.');
     }
   };
 
@@ -183,6 +201,15 @@ export function AdminCustomers() {
     await saveToServer(customers, updated);
   };
 
+  const saveHero = async () => {
+    const res = await apiFetch('/api/admin/content/pages/page-customers', {
+      method: 'PUT',
+      body: JSON.stringify({ data: { heroTitle, heroSubtitle, heroGradient } }),
+    });
+    if (res.ok) toast.success('Page header berhasil disimpan!');
+    else toast.error('Gagal menyimpan page header.');
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-8">
@@ -197,6 +224,25 @@ export function AdminCustomers() {
             Changes saved successfully!
           </div>
         )}
+
+        {/* Page Header Section */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg text-gray-900">Page Header</h2>
+            <button onClick={saveHero} className="text-sm text-orange-600 hover:text-orange-700 font-medium">Save Header</button>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Title</label>
+              <input type="text" value={heroTitle} onChange={(e) => setHeroTitle(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Subtitle</label>
+              <textarea value={heroSubtitle} onChange={(e) => setHeroSubtitle(e.target.value)} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+            </div>
+            <GradientPicker value={heroGradient} onChange={setHeroGradient} />
+          </div>
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center min-h-[30vh]">

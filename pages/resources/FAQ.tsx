@@ -136,7 +136,7 @@ export function FAQ() {
       <section className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-5xl mb-6">Frequently Asked Questions</h1>
+            <h1 className="font-bold text-4xl lg:text-5xl mb-6">Frequently Asked Questions</h1>
             <p className="text-xl opacity-90">
               Find answers to common questions about our enterprise connectivity solutions.
             </p>
@@ -213,12 +213,12 @@ export function FAQ() {
       {/* Contact CTA */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl mb-4">Still Have Questions?</h2>
+          <h2 className="font-bold text-3xl mb-4">Still Have Questions?</h2>
           <p className="text-xl text-gray-600 mb-6">
             Our team is here to help. Contact us for personalized assistance.
           </p>
           <a
-            href="/contact"
+            href="/contact-us"
             className="inline-block bg-orange-500 text-white px-8 py-3 rounded-lg hover:bg-orange-600 transition-colors"
           >
             Contact Support

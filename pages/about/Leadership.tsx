@@ -1,6 +1,7 @@
 import { Linkedin, Mail, Twitter, Instagram } from 'lucide-react';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 import { usePageContent } from '../../hooks/usePageContent';
+import { getHeroGradient } from '../../components/HeroGradient';
 
 interface Leader {
   id?: string;
@@ -18,6 +19,7 @@ interface Leader {
 export function Leadership() {
   const content = usePageContent('about-leadership', {
     teamMembers: [] as Leader[],
+    heroGradient: 'orange',
   });
 
   const colors = ['orange', 'blue', 'green'];
@@ -29,10 +31,10 @@ export function Leadership() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-20">
+      <section className={`${getHeroGradient((content as any).heroGradient)} text-white py-20`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-5xl mb-6">Leadership Team</h1>
+            <h1 className="font-bold text-4xl lg:text-5xl mb-6">Leadership Team</h1>
             <p className="text-xl opacity-90">
               Meet the experienced professionals driving SuperCorridor's mission to deliver exceptional connectivity solutions.
             </p>
@@ -72,7 +74,7 @@ export function Leadership() {
                   </div>
                 )}
 
-                <h3 className="text-xl text-center mb-1">{leader.name}</h3>
+                <h3 className="font-bold text-xl text-center mb-1">{leader.name}</h3>
                 <p
                   className={`text-center mb-4 ${
                     leader.color === 'orange'
@@ -144,7 +146,7 @@ export function Leadership() {
       {/* Join Team CTA */}
       <section className="py-16 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl mb-4">Join Our Team</h2>
+          <h2 className="font-bold text-3xl mb-4">Join Our Team</h2>
           <p className="text-xl opacity-90 mb-6">
             We're always looking for talented professionals to help us build the future of connectivity.
           </p>

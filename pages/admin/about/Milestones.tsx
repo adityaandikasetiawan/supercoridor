@@ -1,6 +1,7 @@
 import { AdminLayout } from '../../../components/AdminLayout';
 import { Save, Plus, Trash2 } from 'lucide-react';
 import { useAdminContent } from '../../../hooks/useAdminContent';
+import { GradientPicker } from '../../../components/GradientPicker';
 
 interface Milestone {
   id: string;
@@ -11,6 +12,7 @@ interface Milestone {
 
 export function AdminAboutMilestones() {
   const defaultData = {
+    heroGradient: 'blue',
     milestones: [
       { id: '1', year: '2008', title: 'Company Founded', description: 'SuperCorridor was established with a vision to transform enterprise connectivity in Indonesia.' },
       { id: '2', year: '2010', title: 'First 100 Clients', description: 'Reached our first major milestone, serving 100 enterprise customers across Jakarta.' },
@@ -76,6 +78,9 @@ export function AdminAboutMilestones() {
         )}
 
         <form onSubmit={handleSave} className="space-y-4">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <GradientPicker value={data.heroGradient ?? 'blue'} onChange={(v) => setData({ ...data, heroGradient: v })} />
+          </div>
           {data.milestones.map((milestone, index) => (
             <div key={milestone.id} className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SuperCorridor - Under Maintenance</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+      padding: 1rem;
+    }
+
+    .container {
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .icon-wrapper {
+      position: relative;
+      display: inline-flex;
+      margin-bottom: 2rem;
+    }
+
+    .icon-circle {
+      width: 128px;
+      height: 128px;
+      background: #dbeafe;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon-circle svg {
+      width: 64px;
+      height: 64px;
+      color: #2563eb;
+    }
+
+    .pulse {
+      position: absolute;
+      inset: 0;
+      width: 128px;
+      height: 128px;
+      border-radius: 50%;
+      background: #93c5fd;
+      opacity: 0.25;
+      animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+
+    @keyframes ping {
+      75%, 100% { transform: scale(1.5); opacity: 0; }
+    }
+
+    h1 {
+      font-size: 1.875rem;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 1.125rem;
+      color: #2563eb;
+      font-weight: 500;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 1rem;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+      border: 1px solid #f3f4f6;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card p {
+      color: #4b5563;
+      line-height: 1.7;
+      margin-bottom: 1rem;
+    }
+
+    .card p:last-child { margin-bottom: 0; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 0.5rem;
+      padding: 0.5rem 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .badge svg {
+      width: 20px;
+      height: 20px;
+      color: #3b82f6;
+    }
+
+    .badge span {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #1d4ed8;
+    }
+
+    .contact {
+      background: #f9fafb;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .contact h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 0.5rem;
+    }
+
+    .contact p {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-bottom: 0.75rem;
+    }
+
+    .contact-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .contact-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.875rem;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+
+    .contact-links a:hover { opacity: 0.7; }
+
+    .email-link { color: #2563eb; }
+    .wa-link { color: #16a34a; }
+
+    .separator {
+      color: #d1d5db;
+      user-select: none;
+    }
+
+    .copyright {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    @media (min-width: 640px) {
+      h1 { font-size: 2.25rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Logo -->
+    <div style="margin-bottom: 1.5rem;">
+      <div style="display: flex; flex-direction: column; align-items: center;">
+        <span style="font-size: 2rem; font-weight: 700; background: linear-gradient(to right, #f97316, #2563eb, #22c55e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          SuperCorridor
+        </span>
+        <span style="margin-top: 0.25rem; font-size: 0.75rem; font-weight: 600; letter-spacing: -0.01em; background: linear-gradient(to right, #f97316, #2563eb, #22c55e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          Your Neutral Network Provider
+        </span>
+      </div>
+    </div>
+
+    <!-- Icon -->
+    <div class="icon-wrapper">
+      <div class="pulse"></div>
+      <div class="icon-circle">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.204-.107-.397.165-.71.505-.78.929l-.15.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Heading -->
+    <h1>Sedang Dalam Pemeliharaan</h1>
+    <p class="subtitle">Kami sedang meningkatkan sistem</p>
+
+    <!-- Description -->
+    <div class="card">
+      <p>Kami sedang melakukan peningkatan dan pemeliharaan sistem untuk memberikan pengalaman yang lebih baik bagi Anda.</p>
+      <p>Silakan kembali lagi nanti. Terima kasih atas kesabaran Anda.</p>
+    </div>
+
+    <!-- Estimate -->
+    <div class="badge">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span>Estimasi: Akan segera kembali online</span>
+    </div>
+
+    <!-- Contact -->
+    <div class="contact">
+      <h2>Hubungi Kami</h2>
+      <div class="contact-links">
+        <a href="mailto:info@supercorridor.co.id" class="email-link">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          info@supercorridor.co.id
+        </a>
+        <span class="separator">|</span>
+        <a href="https://wa.me/6282289986477" target="_blank" rel="noopener noreferrer" class="wa-link">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.134.563 4.216 1.625 6.063l-1.5 5.5 5.688-1.469A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/>
+          </svg>
+          WhatsApp
+        </a>
+      </div>
+    </div>
+
+    <!-- Copyright -->
+    <p class="copyright">&copy; 2026 PT Trans Indonesia Superkoridor. All rights reserved.</p>
+  </div>
+</body>
+</html>

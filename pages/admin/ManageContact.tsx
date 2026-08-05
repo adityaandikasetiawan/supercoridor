@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Search, Mail, Phone, Calendar, Eye, Trash2, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiFetch } from '../../utils/storage';
+import { GradientPicker } from '../../components/GradientPicker';
 
 interface ContactMessage {
   id: string;
@@ -21,6 +23,11 @@ export function ManageContact() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Page header state
+  const [heroTitle, setHeroTitle] = useState('Contact Us');
+  const [heroSubtitle, setHeroSubtitle] = useState('Get in touch with our team to discuss your enterprise connectivity needs.');
+  const [heroGradient, setHeroGradient] = useState('orange');
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -28,6 +35,14 @@ export function ManageContact() {
         if (response.ok) {
           const data = await response.json();
           setMessages(data.messages ?? []);
+        }
+        // Load page header
+        const headerRes = await apiFetch('/api/admin/content/pages/page-contact', { method: 'GET' });
+        if (headerRes.ok) {
+          const headerData = await headerRes.json();
+          if (headerData.data?.heroTitle) setHeroTitle(headerData.data.heroTitle);
+          if (headerData.data?.heroSubtitle) setHeroSubtitle(headerData.data.heroSubtitle);
+          if (headerData.data?.heroGradient) setHeroGradient(headerData.data.heroGradient);
         }
       } catch {
         // silently fail, show empty state
@@ -41,29 +56,32 @@ export function ManageContact() {
   const handleMarkAsRead = async (id: string) => {
     const updated = messages.map((m) => (m.id === id ? { ...m, status: 'read' as const } : m));
     setMessages(updated);
-    await apiFetch('/api/admin/content/contact-messages', {
+    const res = await apiFetch('/api/admin/content/contact-messages', {
       method: 'PUT',
       body: JSON.stringify({ messages: updated }),
     });
+    if (res.ok) toast.success('Ditandai sudah dibaca.');
   };
 
   const handleMarkAsResponded = async (id: string) => {
     const updated = messages.map((m) => (m.id === id ? { ...m, status: 'responded' as const } : m));
     setMessages(updated);
-    await apiFetch('/api/admin/content/contact-messages', {
+    const res = await apiFetch('/api/admin/content/contact-messages', {
       method: 'PUT',
       body: JSON.stringify({ messages: updated }),
     });
+    if (res.ok) toast.success('Ditandai sudah direspon.');
   };
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this message?')) return;
     const updated = messages.filter((m) => m.id !== id);
     setMessages(updated);
-    await apiFetch('/api/admin/content/contact-messages', {
+    const res = await apiFetch('/api/admin/content/contact-messages', {
       method: 'PUT',
       body: JSON.stringify({ messages: updated }),
     });
+    if (res.ok) toast.success('Pesan berhasil dihapus.');
   };
 
   const filteredMessages = messages.filter((msg) => {
@@ -99,11 +117,41 @@ export function ManageContact() {
     );
   }
 
+  const saveHero = async () => {
+    const res = await apiFetch('/api/admin/content/pages/page-contact', {
+      method: 'PUT',
+      body: JSON.stringify({ data: { heroTitle, heroSubtitle, heroGradient } }),
+    });
+    if (res.ok) toast.success('Page header berhasil disimpan!');
+    else toast.error('Gagal menyimpan page header.');
+  };
+
   return (
     <AdminLayout>
       <div className="mb-8">
         <h1 className="text-3xl mb-2">Contact Messages</h1>
         <p className="text-gray-600">Manage and respond to customer inquiries</p>
+      </div>
+
+      {/* Page Header Section */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg text-gray-900">Page Header</h2>
+          <button onClick={saveHero} className="text-sm text-orange-600 hover:text-orange-700 font-medium">Save Header</button>
+        </div>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Title</label>
+            <input type="text" value={heroTitle} onChange={(e) => setHeroTitle(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Subtitle</label>
+            <input type="text" value={heroSubtitle} onChange={(e) => setHeroSubtitle(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+          </div>
+        </div>
+        <div className="mt-3">
+          <GradientPicker value={heroGradient} onChange={setHeroGradient} />
+        </div>
       </div>
 
       {/* Stats */}

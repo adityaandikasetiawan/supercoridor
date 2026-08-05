@@ -22,6 +22,7 @@ type LoginResult =
       ok: false;
       error: 'INVALID_CREDENTIALS' | 'LOCKED' | 'NOT_CONFIGURED' | 'SERVER_UNAVAILABLE' | 'INTERNAL';
       lockUntil?: number;
+      remainingAttempts?: number;
     };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -139,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const isJson = contentType.includes('application/json');
       const body = (isJson ? await response.json().catch(() => null) : null) as
         | { ok: true; user: User }
-        | { ok: false; error: 'INVALID_CREDENTIALS' | 'LOCKED' | 'NOT_CONFIGURED' | 'INTERNAL'; lockUntil?: number }
+        | { ok: false; error: 'INVALID_CREDENTIALS' | 'LOCKED' | 'NOT_CONFIGURED' | 'INTERNAL'; lockUntil?: number; remainingAttempts?: number }
         | null;
 
       if (response.ok && body && body.ok) {
@@ -164,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { ok: false, error: 'INTERNAL' };
       }
 
-      return { ok: false, error: 'INVALID_CREDENTIALS' };
+      return { ok: false, error: 'INVALID_CREDENTIALS', remainingAttempts: body?.remainingAttempts };
     },
     [apiFetch]
   );

@@ -120,7 +120,7 @@ export function CaseStudies() {
       <section className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-5xl mb-6">Case Studies</h1>
+            <h1 className="font-bold text-4xl lg:text-5xl mb-6">Case Studies</h1>
             <p className="text-xl opacity-90">
               Real-world success stories of how SuperCorridor's connectivity solutions transformed businesses.
             </p>
@@ -160,7 +160,7 @@ export function CaseStudies() {
                   </div>
                   {/* Content */}
                   <div className="flex-1 p-6 md:p-8">
-                    <h2 className="text-xl md:text-2xl text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">{study.client}</h2>
+                    <h2 className="font-bold text-xl md:text-2xl text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">{study.client}</h2>
                     <p className="text-gray-600 mb-4 line-clamp-2">{study.challenge}</p>
                     <div className="flex flex-wrap gap-2 mb-4">
                       {study.results.slice(0, 3).map((result, ri) => (
@@ -183,12 +183,12 @@ export function CaseStudies() {
       {/* CTA */}
       <section className="py-16 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl mb-4">Ready to Transform Your Business?</h2>
+          <h2 className="font-bold text-3xl mb-4">Ready to Transform Your Business?</h2>
           <p className="text-xl opacity-90 mb-6">
             Let's discuss how SuperCorridor can help you achieve similar results.
           </p>
           <a
-            href="/contact"
+            href="/contact-us"
             className="inline-flex items-center bg-white text-blue-600 px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors"
           >
             Get in Touch

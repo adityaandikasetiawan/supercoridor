@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle, ArrowRight } from 'lucide-react';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 import { usePageContent } from '../../hooks/usePageContent';
+import { getHeroGradient } from '../../components/HeroGradient';
 
 export function DedicatedConnectivity() {
   const content = usePageContent('solutions-dedicated-connectivity', {
@@ -31,7 +32,7 @@ export function DedicatedConnectivity() {
       <section className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-5xl mb-6">{content.title}</h1>
+            <h1 className="font-bold text-4xl lg:text-5xl mb-6">{content.title}</h1>
             <p className="text-xl opacity-90">{content.subtitle}</p>
           </div>
         </div>
@@ -42,7 +43,7 @@ export function DedicatedConnectivity() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
             <div>
-              <h2 className="text-3xl mb-6">Enterprise-Grade Dedicated Connections</h2>
+              <h2 className="font-bold text-3xl mb-6">Enterprise-Grade Dedicated Connections</h2>
               <p className="text-gray-600 mb-6">{content.description}</p>
               <ul className="space-y-4">
                 {content.features.map((feature, index) => (
@@ -64,7 +65,7 @@ export function DedicatedConnectivity() {
 
           {/* Use Cases */}
           <div className="mb-16">
-            <h2 className="text-3xl mb-8 text-center">Perfect For</h2>
+            <h2 className="font-bold text-3xl mb-8 text-center">Perfect For</h2>
             <div className="grid md:grid-cols-3 gap-8">
               {content.useCases.map((useCase, index) => {
                 const colors = [
@@ -85,10 +86,10 @@ export function DedicatedConnectivity() {
 
           {/* CTA */}
           <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg p-8 text-center">
-            <h2 className="text-3xl mb-4">{content.ctaTitle}</h2>
+            <h2 className="font-bold text-3xl mb-4">{content.ctaTitle}</h2>
             <p className="text-xl opacity-90 mb-6">{content.ctaDescription}</p>
             <Link
-              to="/contact"
+              to="/contact-us"
               className="inline-flex items-center bg-white text-orange-600 px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors"
             >
               {content.ctaButtonText}

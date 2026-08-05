@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Lock, Mail, AlertCircle } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { apiFetch } from '../../utils/storage';
 
 export function Login() {
@@ -9,6 +9,7 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
   const isDev = Boolean((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV);
@@ -46,7 +47,11 @@ export function Login() {
         } else if (result.error === 'INTERNAL') {
           setError('Terjadi kesalahan di server. Silakan cek log backend.');
         } else {
-          setError('Email atau password salah.');
+          setError(
+            result.remainingAttempts !== undefined && result.remainingAttempts < 4
+              ? `Email atau password salah. Sisa ${result.remainingAttempts} percobaan sebelum akun dikunci.`
+              : 'Email atau password salah.'
+          );
         }
       }
     } catch (err) {
@@ -60,9 +65,7 @@ export function Login() {
     <div className="min-h-screen bg-gradient-to-br from-orange-500 via-blue-600 to-green-500 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl mb-2 bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 bg-clip-text text-transparent">
-            SuperCorridor
-          </h1>
+          <img src="/image/logo-tis.png" alt="TIS Logo" className="h-12 mx-auto mb-2" />
           <p className="text-gray-600">Admin Dashboard Login</p>
         </div>
 
@@ -100,13 +103,21 @@ export function Login() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none transition-colors"
+                className="w-full pl-10 pr-12 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none transition-colors"
                 placeholder="Enter your password"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
           </div>
 

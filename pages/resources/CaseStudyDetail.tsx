@@ -54,7 +54,7 @@ export function CaseStudyDetail() {
     return (
       <div className="min-h-[60vh] flex items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="text-4xl text-gray-900 mb-4">Case Study Not Found</h1>
+          <h1 className="font-bold text-4xl text-gray-900 mb-4">Case Study Not Found</h1>
           <p className="text-gray-600 mb-8">The case study you're looking for doesn't exist.</p>
           <Link to="/resources/case-studies" className="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Case Studies
@@ -85,7 +85,7 @@ export function CaseStudyDetail() {
           <div className="flex items-center gap-3 mb-6">
             <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm">{study.industry}</span>
           </div>
-          <h1 className="text-3xl md:text-5xl mb-6 leading-tight">{study.title}</h1>
+          <h1 className="font-bold text-3xl md:text-5xl mb-6 leading-tight">{study.title}</h1>
           <div className="flex flex-wrap items-center gap-6 text-blue-100">
             <span className="flex items-center gap-2"><Building2 className="w-5 h-5" /> {study.client}</span>
             <span className="flex items-center gap-2"><Briefcase className="w-5 h-5" /> {study.industry}</span>
@@ -111,7 +111,7 @@ export function CaseStudyDetail() {
                 <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
                   <span className="text-orange-600 font-bold text-lg">1</span>
                 </div>
-                <h2 className="text-xl md:text-2xl text-gray-900">The Challenge</h2>
+                <h2 className="font-bold text-xl md:text-2xl text-gray-900">The Challenge</h2>
               </div>
               <div className="prose prose-gray max-w-none" dangerouslySetInnerHTML={{ __html: study.challenge }} />
             </div>
@@ -122,7 +122,7 @@ export function CaseStudyDetail() {
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                   <span className="text-blue-600 font-bold text-lg">2</span>
                 </div>
-                <h2 className="text-xl md:text-2xl text-gray-900">Our Solution</h2>
+                <h2 className="font-bold text-xl md:text-2xl text-gray-900">Our Solution</h2>
               </div>
               <div className="prose prose-gray max-w-none" dangerouslySetInnerHTML={{ __html: study.solution }} />
             </div>
@@ -135,7 +135,7 @@ export function CaseStudyDetail() {
                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                   <CheckCircle className="w-5 h-5 text-green-600" />
                 </div>
-                <h2 className="text-xl text-gray-900">Results</h2>
+                <h2 className="font-bold text-xl text-gray-900">Results</h2>
               </div>
               {resultsList.length > 0 ? (
                 <ul className="space-y-4">
@@ -155,10 +155,10 @@ export function CaseStudyDetail() {
 
         {/* CTA */}
         <div className="mt-12 mb-16 bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 md:p-10 text-center text-white">
-          <h3 className="text-2xl md:text-3xl mb-3">Want Similar Results?</h3>
+          <h3 className="font-bold text-2xl md:text-3xl mb-3">Want Similar Results?</h3>
           <p className="text-blue-100 mb-6 text-lg">Let's discuss how SuperCorridor can transform your connectivity.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/contact" className="inline-flex items-center justify-center bg-white text-blue-600 px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium">
+            <Link to="/contact-us" className="inline-flex items-center justify-center bg-white text-blue-600 px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium">
               Contact Us
             </Link>
             <Link to="/resources/case-studies" className="inline-flex items-center justify-center border-2 border-white text-white px-8 py-3 rounded-lg hover:bg-white/10 transition-colors">

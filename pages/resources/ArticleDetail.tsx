@@ -54,7 +54,7 @@ export function ArticleDetail() {
     return (
       <div className="min-h-[60vh] flex items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="text-4xl text-gray-900 mb-4">Article Not Found</h1>
+          <h1 className="font-bold text-4xl text-gray-900 mb-4">Article Not Found</h1>
           <p className="text-gray-600 mb-8">The article you're looking for doesn't exist or has been removed.</p>
           <Link to="/resources/insights" className="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Articles
@@ -100,7 +100,7 @@ export function ArticleDetail() {
               <span className="px-3 py-1 bg-orange-100 text-orange-600 rounded-full text-sm font-medium">{article.category}</span>
               <span className="flex items-center gap-1 text-gray-500 text-sm"><Clock className="w-3.5 h-3.5" /> {readingTime} min read</span>
             </div>
-            <h1 className="text-3xl md:text-4xl text-gray-900 leading-tight mb-6">{article.title}</h1>
+            <h1 className="font-bold text-3xl md:text-4xl text-gray-900 leading-tight mb-6">{article.title}</h1>
             
             {/* Author & Meta */}
             <div className="flex items-center justify-between pb-6 border-b border-gray-200">
@@ -138,9 +138,9 @@ export function ArticleDetail() {
 
         {/* Related / CTA */}
         <div className="mt-8 mb-16 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-8 text-center text-white">
-          <h3 className="text-2xl mb-3">Need Enterprise Connectivity?</h3>
+          <h3 className="font-bold text-2xl mb-3">Need Enterprise Connectivity?</h3>
           <p className="text-orange-100 mb-6">Contact our team to discuss your requirements</p>
-          <Link to="/contact" className="inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium">
+          <Link to="/contact-us" className="inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium">
             Contact Us
           </Link>
         </div>

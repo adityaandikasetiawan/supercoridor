@@ -1,40 +1,103 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Twitter, Linkedin, Instagram, Mail, Phone, MapPin } from 'lucide-react';
+import { Facebook, Twitter, Linkedin, Instagram, Youtube, Mail, Phone, MapPin } from 'lucide-react';
+
+interface SocialItem {
+  name: string;
+  url: string;
+  icon?: string;
+}
+
+interface SiteSettings {
+  website?: { name?: string; phone?: string; email?: string; address?: string };
+  social?: SocialItem[] | Record<string, string>;
+}
+
+function getDefaultIcon(name: string) {
+  const n = name.toLowerCase();
+  if (n.includes('facebook')) return Facebook;
+  if (n.includes('twitter') || n.includes('x')) return Twitter;
+  if (n.includes('linkedin')) return Linkedin;
+  if (n.includes('instagram')) return Instagram;
+  if (n.includes('youtube')) return Youtube;
+  return null;
+}
 
 export function Footer() {
+  const [settings, setSettings] = useState<SiteSettings>({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/content/settings', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.settings) setSettings(data.settings);
+        }
+      } catch { /* use defaults */ }
+    })();
+  }, []);
+
+  const website = settings.website ?? {};
+
+  // Normalize social to array format
+  let socialItems: SocialItem[] = [];
+  if (Array.isArray(settings.social)) {
+    socialItems = settings.social.filter((item) => item.url);
+  } else if (settings.social && typeof settings.social === 'object') {
+    // Old format: { facebook: "url", twitter: "url", ... }
+    socialItems = Object.entries(settings.social)
+      .filter(([, v]) => typeof v === 'string' && v)
+      .map(([key, value]) => ({
+        name: key === 'facebook' ? 'Facebook' : key === 'twitter' ? 'Twitter / X' : key === 'linkedin' ? 'LinkedIn' : key === 'instagram' ? 'Instagram' : key === 'youtube' ? 'YouTube' : key === 'whatsapp' ? 'WhatsApp' : key,
+        url: value,
+        icon: '',
+      }));
+  }
+
   return (
     <footer className="bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div>
-            <Link to="/" className="inline-flex items-baseline">
-              <div className="flex flex-col leading-none">
-                <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 bg-clip-text text-transparent">
-                  SuperCorridor
-                </span>
-                <span className="mt-1 text-[12px] font-semibold tracking-tight bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 bg-clip-text text-transparent">
-                  Your Neutral Network Provider
-                </span>
-              </div>
-              <span className="ml-2 text-sm text-gray-400">business</span>
+            <Link to="/" className="inline-flex items-center">
+              <img src="/image/logo-tis.png" alt="TIS Logo" className="h-12" />
             </Link>
             <p className="text-gray-400 mb-4">
               Leading provider of enterprise-grade internet connectivity and network solutions.
             </p>
             <div className="flex space-x-4">
-              <a href="#" aria-label="Facebook" className="text-gray-400 hover:text-orange-500 transition-colors">
-                <Facebook className="w-5 h-5" />
-              </a>
-              <a href="#" aria-label="Twitter" className="text-gray-400 hover:text-blue-500 transition-colors">
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a href="#" aria-label="LinkedIn" className="text-gray-400 hover:text-blue-600 transition-colors">
-                <Linkedin className="w-5 h-5" />
-              </a>
-              <a href="#" aria-label="Instagram" className="text-gray-400 hover:text-orange-400 transition-colors">
-                <Instagram className="w-5 h-5" />
-              </a>
+              {socialItems.length > 0 ? (
+                socialItems.map((item, index) => {
+                  const DefaultIcon = getDefaultIcon(item.name);
+                  return (
+                    <a
+                      key={index}
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={item.name}
+                      className="text-gray-400 hover:text-orange-500 transition-colors"
+                    >
+                      {item.icon ? (
+                        <img src={item.icon} alt={item.name} className="w-5 h-5" />
+                      ) : DefaultIcon ? (
+                        <DefaultIcon className="w-5 h-5" />
+                      ) : (
+                        <span className="w-5 h-5 flex items-center justify-center text-xs font-bold">{item.name.charAt(0)}</span>
+                      )}
+                    </a>
+                  );
+                })
+              ) : (
+                <>
+                  <span className="text-gray-400"><Facebook className="w-5 h-5" /></span>
+                  <span className="text-gray-400"><Twitter className="w-5 h-5" /></span>
+                  <span className="text-gray-400"><Linkedin className="w-5 h-5" /></span>
+                  <span className="text-gray-400"><Instagram className="w-5 h-5" /></span>
+                </>
+              )}
             </div>
           </div>
 
@@ -98,15 +161,15 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-start text-gray-400">
                 <MapPin className="w-5 h-5 mr-2 mt-1 flex-shrink-0 text-orange-500" />
-                <span>Artha Gading Niaga Blok E 11, 12, 15A Kelapa Gading, Jakarta 14240 Indonesia</span>
+                <span>{website.address || 'Artha Gading Niaga Blok E 11, 12, 15A Kelapa Gading, Jakarta 14240 Indonesia'}</span>
               </li>
               <li className="flex items-center text-gray-400">
                 <Phone className="w-5 h-5 mr-2 flex-shrink-0 text-blue-500" />
-                <span>021-4587 8409</span>
+                <span>{website.phone || '021-4587 8409'}</span>
               </li>
               <li className="flex items-center text-gray-400">
                 <Mail className="w-5 h-5 mr-2 flex-shrink-0 text-green-500" />
-                <span>ask@supercorridor.co.id</span>
+                <span>{website.email || 'ask@supercorridor.co.id'}</span>
               </li>
             </ul>
           </div>

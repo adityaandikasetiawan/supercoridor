@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Plus, Edit, Trash2, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiFetch } from '../../utils/storage';
 
 interface FAQ {
@@ -66,13 +67,18 @@ export function AdminResourcesFAQ() {
 
   const persistFaqs = async (nextFaqs: FAQ[]) => {
     try {
-      await apiFetch('/api/admin/content/resources/faq', {
+      const response = await apiFetch('/api/admin/content/resources/faq', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ faqs: nextFaqs }),
       });
-    } catch (err) {
-      void err;
+      if (response.ok) {
+        toast.success('FAQ berhasil disimpan!');
+      } else {
+        toast.error('Gagal menyimpan FAQ.');
+      }
+    } catch {
+      toast.error('Gagal menyimpan. Periksa koneksi internet.');
     }
   };
 

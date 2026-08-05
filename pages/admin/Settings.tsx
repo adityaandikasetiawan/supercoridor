@@ -42,14 +42,14 @@ export function Settings() {
     favicon: '',
   });
 
-  const [social, setSocial] = useState({
-    facebook: '',
-    twitter: '',
-    linkedin: '',
-    instagram: '',
-    youtube: '',
-    whatsapp: '',
-  });
+  const [social, setSocial] = useState<{ name: string; url: string; icon: string }[]>([
+    { name: 'Facebook', url: '', icon: '' },
+    { name: 'Twitter / X', url: '', icon: '' },
+    { name: 'LinkedIn', url: '', icon: '' },
+    { name: 'Instagram', url: '', icon: '' },
+    { name: 'YouTube', url: '', icon: '' },
+    { name: 'WhatsApp', url: '', icon: '' },
+  ]);
 
   const [seo, setSeo] = useState({
     metaTitle: 'SuperCorridor - Enterprise Connectivity Solutions',
@@ -75,7 +75,23 @@ export function Settings() {
             if (data.settings.profile) setProfile(data.settings.profile);
             if (data.settings.notifications) setNotifications(data.settings.notifications);
             if (data.settings.website) setWebsite((prev) => ({ ...prev, ...data.settings.website }));
-            if (data.settings.social) setSocial((prev) => ({ ...prev, ...data.settings.social }));
+            if (data.settings.social) {
+              if (Array.isArray(data.settings.social)) {
+                setSocial(data.settings.social);
+              } else {
+                // Convert old format to new format
+                const oldSocial = data.settings.social;
+                const converted = Object.entries(oldSocial)
+                  .filter(([, v]) => typeof v === 'string')
+                  .map(([key, value]) => ({
+                    name: key === 'facebook' ? 'Facebook' : key === 'twitter' ? 'Twitter / X' : key === 'linkedin' ? 'LinkedIn' : key === 'instagram' ? 'Instagram' : key === 'youtube' ? 'YouTube' : key === 'whatsapp' ? 'WhatsApp' : key,
+                    url: value as string,
+                    icon: '',
+                  }))
+                  .filter((item) => item.url);
+                if (converted.length > 0) setSocial(converted);
+              }
+            }
             if (data.settings.seo) setSeo((prev) => ({ ...prev, ...data.settings.seo }));
             if (data.settings.advanced) setAdvanced((prev) => ({ ...prev, ...data.settings.advanced }));
           }
@@ -287,37 +303,67 @@ export function Settings() {
         {/* Social Media Tab */}
         {activeTab === 'social' && (
           <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-            <h2 className="text-lg text-gray-900 mb-4 flex items-center gap-2">
-              <Share2 className="w-5 h-5 text-orange-600" /> Social Media Links
-            </h2>
-            <p className="text-sm text-gray-600 mb-4">Add your social media URLs. Leave blank to hide from the website.</p>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg text-gray-900 flex items-center gap-2">
+                <Share2 className="w-5 h-5 text-orange-600" /> Social Media Links
+              </h2>
+              <button
+                type="button"
+                onClick={() => setSocial([...social, { name: '', url: '', icon: '' }])}
+                className="text-sm text-orange-600 hover:text-orange-700 flex items-center gap-1"
+              >
+                + Add Social Media
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">Manage your social media links. Upload custom icons or leave blank for default icons.</p>
             <div className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-700 mb-1">Facebook</label>
-                  <input type="url" value={social.facebook} onChange={(e) => setSocial({ ...social, facebook: e.target.value })} placeholder="https://facebook.com/supercorridor" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+              {social.map((item, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="text-sm font-medium text-gray-700">Social Media {index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSocial(social.filter((_, i) => i !== index))}
+                      className="text-xs text-red-500 hover:text-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Platform Name</label>
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) => { const updated = [...social]; updated[index] = { ...updated[index], name: e.target.value }; setSocial(updated); }}
+                        placeholder="e.g. Facebook, TikTok, etc."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">URL / Link</label>
+                      <input
+                        type="text"
+                        value={item.url}
+                        onChange={(e) => { const updated = [...social]; updated[index] = { ...updated[index], url: e.target.value }; setSocial(updated); }}
+                        placeholder="https://..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <ImageUpload
+                      value={item.icon}
+                      onChange={(url) => { const updated = [...social]; updated[index] = { ...updated[index], icon: url }; setSocial(updated); }}
+                      label="Custom Icon (optional, recommended 24x24 PNG)"
+                      previewClassName="w-8 h-8 object-contain"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm text-gray-700 mb-1">Twitter / X</label>
-                  <input type="url" value={social.twitter} onChange={(e) => setSocial({ ...social, twitter: e.target.value })} placeholder="https://twitter.com/supercorridor" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-700 mb-1">LinkedIn</label>
-                  <input type="url" value={social.linkedin} onChange={(e) => setSocial({ ...social, linkedin: e.target.value })} placeholder="https://linkedin.com/company/supercorridor" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-700 mb-1">Instagram</label>
-                  <input type="url" value={social.instagram} onChange={(e) => setSocial({ ...social, instagram: e.target.value })} placeholder="https://instagram.com/supercorridor" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-700 mb-1">YouTube</label>
-                  <input type="url" value={social.youtube} onChange={(e) => setSocial({ ...social, youtube: e.target.value })} placeholder="https://youtube.com/@supercorridor" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-700 mb-1">WhatsApp</label>
-                  <input type="text" value={social.whatsapp} onChange={(e) => setSocial({ ...social, whatsapp: e.target.value })} placeholder="+62 812-3456-7890" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
-                </div>
-              </div>
+              ))}
+              {social.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-4">No social media links added. Click "Add Social Media" to get started.</p>
+              )}
             </div>
           </div>
         )}

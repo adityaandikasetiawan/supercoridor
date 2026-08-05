@@ -12,6 +12,56 @@ export function Navbar() {
   const navigate = useNavigate();
   const { lang, toggleLang, t } = useLanguage();
 
+  const [technologyItems, setTechnologyItems] = useState<{ slug: string; title: string; published: boolean }[]>([
+    { slug: 'dwdm', title: 'DWDM', published: true },
+    { slug: 'mpls', title: 'MPLS', published: true },
+    { slug: 'sd-wan', title: 'SD-WAN', published: true },
+  ]);
+
+  const [solutionItems, setSolutionItems] = useState<{ slug: string; title: string; published: boolean }[]>([
+    { slug: 'dedicated-connectivity', title: 'Dedicated Connectivity', published: true },
+    { slug: 'backbone-network', title: 'Backbone & Network Infrastructure', published: true },
+    { slug: 'cloud-interconnection', title: 'Cloud & Interconnection Services', published: true },
+    { slug: 'value-added-services', title: 'Value-Added Services', published: true },
+  ]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/content/pages/technology-all?_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.data?.technologies && Array.isArray(data.data.technologies)) {
+            const items = data.data.technologies
+              .filter((t: any) => t.published && t.slug && t.title)
+              .map((t: any) => ({ slug: t.slug, title: t.title, published: t.published }));
+            if (items.length > 0) setTechnologyItems(items);
+          }
+        }
+      } catch { /* use defaults */ }
+    })();
+    (async () => {
+      try {
+        const res = await fetch(`/api/content/pages/solutions-all?_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.data?.solutions && Array.isArray(data.data.solutions)) {
+            const items = data.data.solutions
+              .filter((s: any) => s.published && s.slug && s.title)
+              .map((s: any) => ({ slug: s.slug, title: s.title, published: s.published }));
+            if (items.length > 0) setSolutionItems(items);
+          }
+        }
+      } catch { /* use defaults */ }
+    })();
+  }, []);
+
   const toggleDropdown = (menu: string) => {
     setOpenDropdown(openDropdown === menu ? null : menu);
   };
@@ -44,7 +94,7 @@ export function Navbar() {
     return [
       { label: t('nav.home'), to: '/', group: groups.general },
       { label: lang === 'id' ? 'Cakupan Jaringan' : 'Network Coverage', to: '/network-coverage', group: groups.general },
-      { label: t('nav.contactUs'), to: '/contact', group: groups.general },
+      { label: t('nav.contactUs'), to: '/contact-us', group: groups.general },
       { label: t('nav.careers'), to: '/careers', group: groups.careers },
       { label: t('nav.dedicatedConnectivity'), to: '/solutions/dedicated-connectivity', group: groups.solutions },
       { label: t('nav.backboneNetworkInfrastructure'), to: '/solutions/backbone-network', group: groups.solutions },
@@ -55,9 +105,7 @@ export function Navbar() {
       { label: t('nav.leadershipTeam'), to: '/about/leadership', group: groups.about },
       { label: t('nav.milestones'), to: '/about/milestones', group: groups.about },
       { label: t('nav.articlesInsights'), to: '/resources/insights', group: groups.resources },
-      { label: t('nav.caseStudies'), to: '/resources/case-studies', group: groups.resources },
-      { label: t('nav.faq'), to: '/resources/faq', group: groups.resources },
-      { label: t('nav.tgcs'), to: '/tgcs-project', group: groups.projects },
+      { label: t('nav.tgcs'), to: '/subsea-cable-system', group: groups.projects },
     ];
   }, [lang, t]);
 
@@ -111,11 +159,8 @@ export function Navbar() {
               <span className="text-orange-600 font-medium">{t('nav.business')}</span>
             </div>
             <div className="flex items-center space-x-6">
-              <Link to="/contact" className="text-gray-700 hover:text-orange-600 transition-colors">
+              <Link to="/contact-us" className="text-gray-700 hover:text-orange-600 transition-colors">
                 {t('nav.contactUs')}
-              </Link>
-              <Link to="/resources/faq" className="text-gray-700 hover:text-orange-600 transition-colors">
-                {t('nav.support')}
               </Link>
               <Link to="/careers" className="text-gray-700 hover:text-orange-600 transition-colors">
                 {t('nav.careers')}
@@ -140,17 +185,7 @@ export function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <div className="flex items-baseline">
-              <div className="flex flex-col leading-none">
-                <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 bg-clip-text text-transparent">
-                  SuperCorridor
-                </span>
-                <span className="mt-1 text-[12px] font-semibold tracking-tight bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 bg-clip-text text-transparent">
-                  Your Neutral Network Provider
-                </span>
-              </div>
-              <span className="ml-2 text-sm text-gray-600">business</span>
-            </div>
+            <img src="/image/logo-tis.png" alt="TIS Logo" className="h-12" />
           </Link>
 
           {/* Desktop Menu - Horizontal */}
@@ -164,24 +199,15 @@ export function Navbar() {
                 {t('nav.technology')}
               </button>
               <div className="absolute top-full left-0 mt-0 w-64 bg-white shadow-lg rounded-b-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border-t-2 border-orange-600">
-                <Link
-                  to="/solutions/backbone-network"
-                  className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                >
-                  {t('nav.fiberOpticNetwork')}
-                </Link>
-                <Link
-                  to="/solutions/cloud-interconnection"
-                  className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                >
-                  {t('nav.cloudInfrastructure')}
-                </Link>
-                <Link
-                  to="/solutions/value-added-services"
-                  className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                >
-                  {t('nav.networkSecurity')}
-                </Link>
+                {technologyItems.map((item) => (
+                  <Link
+                    key={item.slug}
+                    to={`/solutions/${item.slug}`}
+                    className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                  >
+                    {item.title}
+                  </Link>
+                ))}
               </div>
             </div>
 
@@ -190,32 +216,17 @@ export function Navbar() {
                 {t('nav.solution')}
               </button>
               <div className="absolute top-full left-0 mt-0 w-64 bg-white shadow-lg rounded-b-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border-t-2 border-orange-600">
+                {solutionItems.map((item) => (
+                  <Link
+                    key={item.slug}
+                    to={`/solutions/${item.slug}`}
+                    className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                  >
+                    {item.title}
+                  </Link>
+                ))}
                 <Link
-                  to="/solutions/dedicated-connectivity"
-                  className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                >
-                  {t('nav.dedicatedConnectivity')}
-                </Link>
-                <Link
-                  to="/solutions/backbone-network"
-                  className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                >
-                  {t('nav.backboneNetworkInfrastructure')}
-                </Link>
-                <Link
-                  to="/solutions/cloud-interconnection"
-                  className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                >
-                  {t('nav.cloudInterconnectionServices')}
-                </Link>
-                <Link
-                  to="/solutions/value-added-services"
-                  className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                >
-                  {t('nav.valueAddedServices')}
-                </Link>
-                <Link
-                  to="/tgcs-project"
+                  to="/subsea-cable-system"
                   className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                 >
                   {t('nav.tgcs')}
@@ -259,42 +270,13 @@ export function Navbar() {
               {t('nav.network')}
             </Link>
 
-            <div className="relative group">
-              <button className="text-gray-900 hover:text-orange-600 transition-colors py-2">
-                {t('nav.resources')}
-              </button>
-              <div className="absolute top-full left-0 mt-0 w-56 bg-white shadow-lg rounded-b-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border-t-2 border-orange-600">
-                <Link
-                  to="/resources/insights"
-                  className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                >
-                  {t('nav.articlesInsights')}
-                </Link>
-                <Link
-                  to="/resources/case-studies"
-                  className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                >
-                  {t('nav.caseStudies')}
-                </Link>
-                <Link
-                  to="/resources/faq"
-                  className="block px-4 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                >
-                  {t('nav.faq')}
-                </Link>
-              </div>
-            </div>
+            <Link to="/resources/insights" className="text-gray-900 hover:text-orange-600 transition-colors py-2">
+              {t('nav.articlesInsights')}
+            </Link>
           </div>
 
           {/* Right Side Actions */}
           <div className="hidden lg:flex items-center space-x-4">
-            <Link
-              to="/admin/login"
-              className="text-gray-900 hover:text-orange-600 transition-colors"
-            >
-              {t('nav.login')}
-            </Link>
-            
             <button
               onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
               className="flex items-center text-gray-900 hover:text-orange-600 transition-colors"
@@ -387,27 +369,16 @@ export function Navbar() {
               </button>
               {openDropdown === 'technology' && (
                 <div className="bg-gray-50">
-                  <Link
-                    to="/solutions/backbone-network"
-                    className="block px-8 py-2 text-gray-600 hover:text-orange-500"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.fiberOpticNetwork')}
-                  </Link>
-                  <Link
-                    to="/solutions/cloud-interconnection"
-                    className="block px-8 py-2 text-gray-600 hover:text-orange-500"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.cloudInfrastructure')}
-                  </Link>
-                  <Link
-                    to="/solutions/value-added-services"
-                    className="block px-8 py-2 text-gray-600 hover:text-orange-500"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.networkSecurity')}
-                  </Link>
+                  {technologyItems.map((item) => (
+                    <Link
+                      key={item.slug}
+                      to={`/solutions/${item.slug}`}
+                      className="block px-8 py-2 text-gray-600 hover:text-orange-500"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {item.title}
+                    </Link>
+                  ))}
                 </div>
               )}
             </div>
@@ -423,34 +394,16 @@ export function Navbar() {
               </button>
               {openDropdown === 'solutions' && (
                 <div className="bg-gray-50">
-                  <Link
-                    to="/solutions/dedicated-connectivity"
-                    className="block px-8 py-2 text-gray-600 hover:text-orange-500"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.dedicatedConnectivity')}
-                  </Link>
-                  <Link
-                    to="/solutions/backbone-network"
-                    className="block px-8 py-2 text-gray-600 hover:text-orange-500"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.backboneNetworkInfrastructure')}
-                  </Link>
-                  <Link
-                    to="/solutions/cloud-interconnection"
-                    className="block px-8 py-2 text-gray-600 hover:text-orange-500"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.cloudInterconnectionServices')}
-                  </Link>
-                  <Link
-                    to="/solutions/value-added-services"
-                    className="block px-8 py-2 text-gray-600 hover:text-orange-500"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.valueAddedServices')}
-                  </Link>
+                  {solutionItems.map((item) => (
+                    <Link
+                      key={item.slug}
+                      to={`/solutions/${item.slug}`}
+                      className="block px-8 py-2 text-gray-600 hover:text-orange-500"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {item.title}
+                    </Link>
+                  ))}
                 </div>
               )}
             </div>
@@ -506,41 +459,13 @@ export function Navbar() {
               {t('nav.network')}
             </Link>
 
-            {/* Mobile Resources Dropdown */}
-            <div>
-              <button
-                className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 flex items-center justify-between"
-                onClick={() => toggleDropdown('resources')}
-              >
-                {t('nav.resources')}
-                <ChevronDown className={`w-4 h-4 transition-transform ${openDropdown === 'resources' ? 'rotate-180' : ''}`} />
-              </button>
-              {openDropdown === 'resources' && (
-                <div className="bg-gray-50">
-                  <Link
-                    to="/resources/insights"
-                    className="block px-8 py-2 text-gray-600 hover:text-green-600"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.articlesInsights')}
-                  </Link>
-                  <Link
-                    to="/resources/case-studies"
-                    className="block px-8 py-2 text-gray-600 hover:text-green-600"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.caseStudies')}
-                  </Link>
-                  <Link
-                    to="/resources/faq"
-                    className="block px-8 py-2 text-gray-600 hover:text-green-600"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.faq')}
-                  </Link>
-                </div>
-              )}
-            </div>
+            <Link
+              to="/resources/insights"
+              className="block px-4 py-2 text-gray-700 hover:bg-gray-50"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              {t('nav.articlesInsights')}
+            </Link>
 
             <Link
               to="/careers"
@@ -550,19 +475,11 @@ export function Navbar() {
               {t('nav.careers')}
             </Link>
             <Link
-              to="/contact"
+              to="/contact-us"
               className="block px-4 py-2 mx-4 my-2 text-center bg-orange-500 text-white rounded-lg hover:bg-orange-600"
               onClick={() => setIsMenuOpen(false)}
             >
               {lang === 'id' ? 'Kontak' : 'Contact'}
-            </Link>
-            <Link
-              to="/admin/login"
-              className="flex items-center justify-center px-4 py-2 mx-4 my-2 text-center bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <LogIn className="w-4 h-4 mr-2" />
-              {t('nav.login')}
             </Link>
           </div>
         )}

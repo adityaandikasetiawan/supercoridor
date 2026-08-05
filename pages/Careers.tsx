@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Search, MapPin, Briefcase, Clock, Users, ArrowRight, TrendingUp, Heart, Star, Filter } from 'lucide-react';
 import { apiFetch } from '../utils/storage';
+import { usePageContent } from '../hooks/usePageContent';
+import { getHeroGradient } from '../components/HeroGradient';
 
 type JobListing = {
   id: string;
@@ -142,6 +144,11 @@ const fallbackJobListings = [
 ];
 
 export function Careers() {
+  const pageContent = usePageContent('page-careers', {
+    heroTitle: 'Join Our Team',
+    heroSubtitle: 'Build the future of connectivity with us. We are looking for talented people who share our passion for innovation.',
+    heroGradient: 'orange-blue-green',
+  });
   const [jobListings, setJobListings] = useState<JobListing[]>(fallbackJobListings);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
@@ -172,8 +179,6 @@ export function Careers() {
     experience: '',
     expectedSalary: '',
     availableStartDate: '',
-    emergencyName: '',
-    emergencyPhone: '',
     coverLetter: '',
   });
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -281,12 +286,47 @@ export function Careers() {
       !applyForm.institution ||
       !applyForm.major ||
       !applyForm.expectedSalary ||
-      !applyForm.emergencyName ||
-      !applyForm.emergencyPhone ||
+      !applyForm.availableStartDate ||
       !applyForm.experience
     ) {
-      setApplyError('Mohon lengkapi semua field yang wajib diisi.');
+      const missing: string[] = [];
+      if (!applyForm.applicantName) missing.push('Nama lengkap');
+      if (!applyForm.email) missing.push('Email');
+      if (!applyForm.phone) missing.push('No. HP');
+      if (!applyForm.nik) missing.push('NIK');
+      if (!applyForm.birthDate) missing.push('Tanggal lahir');
+      if (!applyForm.gender) missing.push('Jenis kelamin');
+      if (!applyForm.address) missing.push('Alamat');
+      if (!applyForm.city) missing.push('Kota');
+      if (!applyForm.educationLevel) missing.push('Pendidikan');
+      if (!applyForm.institution) missing.push('Institusi');
+      if (!applyForm.major) missing.push('Jurusan');
+      if (!applyForm.expectedSalary) missing.push('Gaji yang diharapkan');
+      if (!applyForm.availableStartDate) missing.push('Kapan bersedia masuk');
+      if (!applyForm.experience) missing.push('Pengalaman');
+      setApplyError(`Mohon lengkapi: ${missing.join(', ')}`);
       return;
+    }
+    // Validate phone number format
+    if (!/^[0-9+\-\s]{8,20}$/.test(applyForm.phone)) {
+      setApplyError('No. HP harus berupa angka yang valid (8-20 digit).');
+      return;
+    }
+    // Validate NIK format (must be digits, typically 16)
+    if (!/^[0-9]+$/.test(applyForm.nik)) {
+      setApplyError('NIK harus berupa angka.');
+      return;
+    }
+    if (applyForm.postalCode && !/^[0-9]+$/.test(applyForm.postalCode)) {
+      setApplyError('Kode pos harus berupa angka.');
+      return;
+    }
+    if (applyForm.gpa) {
+      const gpaNum = parseFloat(applyForm.gpa);
+      if (isNaN(gpaNum) || gpaNum < 1 || gpaNum > 4) {
+        setApplyError('IPK harus antara 1.00 - 4.00.');
+        return;
+      }
     }
     setApplySubmitting(true);
     setApplyError(null);
@@ -312,8 +352,6 @@ export function Careers() {
       formData.append('experience', applyForm.experience);
       formData.append('expectedSalary', applyForm.expectedSalary);
       formData.append('availableStartDate', applyForm.availableStartDate);
-      formData.append('emergencyName', applyForm.emergencyName);
-      formData.append('emergencyPhone', applyForm.emergencyPhone);
       formData.append('coverLetter', applyForm.coverLetter);
       formData.append('resume', resumeFile);
 
@@ -348,8 +386,6 @@ export function Careers() {
         experience: '',
         expectedSalary: '',
         availableStartDate: '',
-        emergencyName: '',
-        emergencyPhone: '',
         coverLetter: '',
       });
       setResumeFile(null);
@@ -391,12 +427,12 @@ export function Careers() {
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 text-white py-16">
+      <section className={`${getHeroGradient(pageContent.heroGradient)} text-white py-16`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl lg:text-5xl mb-4">Join Our Team</h1>
+            <h1 className="font-bold text-4xl lg:text-5xl mb-4">{pageContent.heroTitle}</h1>
             <p className="text-xl opacity-90 mb-8">
-              Build the future of enterprise connectivity with Indonesia's leading ISP
+              {pageContent.heroSubtitle}
             </p>
             
             {/* Search Bar */}
@@ -467,7 +503,7 @@ export function Careers() {
               <div className={`space-y-6 ${showFilters ? 'block' : 'hidden lg:block'}`}>
                 {/* Department Filter */}
                 <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
-                  <h3 className="mb-3 flex items-center">
+                  <h3 className="font-bold mb-3 flex items-center">
                     <Briefcase className="w-5 h-5 mr-2 text-orange-500" />
                     Department
                   </h3>
@@ -490,7 +526,7 @@ export function Careers() {
 
                 {/* Location Filter */}
                 <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
-                  <h3 className="mb-3 flex items-center">
+                  <h3 className="font-bold mb-3 flex items-center">
                     <MapPin className="w-5 h-5 mr-2 text-blue-600" />
                     Location
                   </h3>
@@ -513,7 +549,7 @@ export function Careers() {
 
                 {/* Type Filter */}
                 <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
-                  <h3 className="mb-3 flex items-center">
+                  <h3 className="font-bold mb-3 flex items-center">
                     <Clock className="w-5 h-5 mr-2 text-green-600" />
                     Job Type
                   </h3>
@@ -543,7 +579,7 @@ export function Careers() {
                 <div className="mb-8">
                   <div className="flex items-center mb-4">
                     <Star className="w-6 h-6 text-orange-500 mr-2" />
-                    <h2 className="text-2xl">Featured Positions</h2>
+                    <h2 className="font-bold text-2xl">Featured Positions</h2>
                   </div>
                   <div className="space-y-4">
                     {featuredJobs.map(job => (
@@ -562,7 +598,7 @@ export function Careers() {
                                 {job.level}
                               </span>
                             </div>
-                            <h3 className="text-xl mb-2 hover:text-orange-600 transition-colors">
+                            <h3 className="font-bold text-xl mb-2 hover:text-orange-600 transition-colors">
                               {job.title}
                             </h3>
                             <div className="flex flex-wrap gap-4 text-gray-600 mb-3">
@@ -629,7 +665,7 @@ export function Careers() {
               {/* Regular Jobs */}
               {regularJobs.length > 0 && (
                 <div>
-                  <h2 className="text-2xl mb-4">
+                  <h2 className="font-bold text-2xl mb-4">
                     All Positions ({regularJobs.length})
                   </h2>
                   <div className="space-y-4">
@@ -646,7 +682,7 @@ export function Careers() {
                                 {job.level}
                               </span>
                             </div>
-                            <h3 className="text-xl mb-2 hover:text-blue-600 transition-colors">
+                            <h3 className="font-bold text-xl mb-2 hover:text-blue-600 transition-colors">
                               {job.title}
                             </h3>
                             <div className="flex flex-wrap gap-4 text-gray-600 mb-3">
@@ -714,7 +750,7 @@ export function Careers() {
               {filteredJobs.length === 0 && (
                 <div className="bg-white border-2 border-gray-200 rounded-lg p-12 text-center">
                   <Search className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                  <h3 className="text-xl mb-2">No jobs found</h3>
+                  <h3 className="font-bold text-xl mb-2">No jobs found</h3>
                   <p className="text-gray-600">Try adjusting your filters or search terms</p>
                 </div>
               )}
@@ -726,13 +762,13 @@ export function Careers() {
       {/* Why Join Us Section */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl mb-12 text-center">Why Join SuperCorridor?</h2>
+          <h2 className="font-bold text-3xl mb-12 text-center">Why Join SuperCorridor?</h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center p-6">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 text-orange-500 rounded-full mb-4">
                 <TrendingUp className="w-8 h-8" />
               </div>
-              <h3 className="text-xl mb-3">Career Growth</h3>
+              <h3 className="font-bold text-xl mb-3">Career Growth</h3>
               <p className="text-gray-600">
                 Fast-track your career with clear progression paths, mentorship programs, and leadership opportunities.
               </p>
@@ -741,7 +777,7 @@ export function Careers() {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-full mb-4">
                 <Users className="w-8 h-8" />
               </div>
-              <h3 className="text-xl mb-3">Great Culture</h3>
+              <h3 className="font-bold text-xl mb-3">Great Culture</h3>
               <p className="text-gray-600">
                 Work with talented professionals in a collaborative environment that values innovation and creativity.
               </p>
@@ -750,7 +786,7 @@ export function Careers() {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 text-green-600 rounded-full mb-4">
                 <Star className="w-8 h-8" />
               </div>
-              <h3 className="text-xl mb-3">Competitive Benefits</h3>
+              <h3 className="font-bold text-xl mb-3">Competitive Benefits</h3>
               <p className="text-gray-600">
                 Enjoy competitive salaries, health insurance, training budgets, and flexible work arrangements.
               </p>
@@ -762,7 +798,7 @@ export function Careers() {
       {/* CTA Section */}
       <section className="py-16 bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl mb-4">Don't See the Right Role?</h2>
+          <h2 className="font-bold text-3xl mb-4">Don't See the Right Role?</h2>
           <p className="text-xl opacity-90 mb-6">
             Send us your resume and we'll keep you in mind for future opportunities.
           </p>
@@ -786,7 +822,7 @@ export function Careers() {
           >
             <div className="p-6 border-b border-gray-200 flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-xl text-gray-900">{selectedJob.title}</h3>
+                <h3 className="font-bold text-xl text-gray-900">{selectedJob.title}</h3>
                 <div className="mt-1 text-gray-600 flex flex-wrap gap-4">
                   <span className="flex items-center">
                     <Briefcase className="w-4 h-4 mr-1" />
@@ -832,14 +868,24 @@ export function Careers() {
                 />
                 <input
                   value={applyForm.phone}
-                  onChange={(e) => setApplyForm((p) => ({ ...p, phone: e.target.value }))}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9+\-\s]/g, '');
+                    setApplyForm((p) => ({ ...p, phone: val }));
+                  }}
                   placeholder="No. HP *"
+                  type="tel"
+                  inputMode="numeric"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
                 <input
                   value={applyForm.nik}
-                  onChange={(e) => setApplyForm((p) => ({ ...p, nik: e.target.value }))}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    setApplyForm((p) => ({ ...p, nik: val }));
+                  }}
                   placeholder="NIK *"
+                  inputMode="numeric"
+                  maxLength={16}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
 
@@ -892,8 +938,13 @@ export function Careers() {
                 />
                 <input
                   value={applyForm.postalCode}
-                  onChange={(e) => setApplyForm((p) => ({ ...p, postalCode: e.target.value }))}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    setApplyForm((p) => ({ ...p, postalCode: val }));
+                  }}
                   placeholder="Kode pos"
+                  inputMode="numeric"
+                  maxLength={5}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
 
@@ -924,8 +975,17 @@ export function Careers() {
                 />
                 <input
                   value={applyForm.gpa}
-                  onChange={(e) => setApplyForm((p) => ({ ...p, gpa: e.target.value }))}
-                  placeholder="IPK (opsional)"
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                    const num = parseFloat(val);
+                    if (val === '' || val === '.' || (val.match(/\./g) || []).length <= 1) {
+                      if (val === '' || isNaN(num) || num <= 4) {
+                        setApplyForm((p) => ({ ...p, gpa: val }));
+                      }
+                    }
+                  }}
+                  placeholder="IPK (1.00 - 4.00, opsional)"
+                  inputMode="decimal"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
 
@@ -942,24 +1002,15 @@ export function Careers() {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
 
-                <input
-                  type="date"
-                  value={applyForm.availableStartDate}
-                  onChange={(e) => setApplyForm((p) => ({ ...p, availableStartDate: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-                <input
-                  value={applyForm.emergencyName}
-                  onChange={(e) => setApplyForm((p) => ({ ...p, emergencyName: e.target.value }))}
-                  placeholder="Nama kontak darurat *"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-                <input
-                  value={applyForm.emergencyPhone}
-                  onChange={(e) => setApplyForm((p) => ({ ...p, emergencyPhone: e.target.value }))}
-                  placeholder="No. kontak darurat *"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
+                <div className="w-full">
+                  <label className="block text-sm text-gray-600 mb-1">Kapan bersedia masuk? *</label>
+                  <input
+                    type="date"
+                    value={applyForm.availableStartDate}
+                    onChange={(e) => setApplyForm((p) => ({ ...p, availableStartDate: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  />
+                </div>
 
                 <div className="md:col-span-2">
                   <input

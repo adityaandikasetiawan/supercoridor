@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { apiFetch } from '../utils/storage';
 
 /**
@@ -45,13 +46,16 @@ export function useAdminContent<T>(key: string, defaultData: T) {
         if (newData) setData(newData);
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
+        toast.success('Berhasil disimpan!');
         return true;
       } else {
         setError('Failed to save changes');
+        toast.error('Gagal menyimpan. Coba lagi.');
         return false;
       }
     } catch {
       setError('Failed to save changes');
+      toast.error('Gagal menyimpan. Periksa koneksi internet.');
       return false;
     } finally {
       setSaving(false);

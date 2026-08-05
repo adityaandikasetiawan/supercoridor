@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { Upload, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiFetch } from '../utils/storage';
 
 interface ImageUploadProps {
@@ -22,12 +23,14 @@ export function ImageUpload({ value, onChange, label = 'Image', previewClassName
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       setError('File terlalu besar. Maksimal 5MB.');
+      toast.error('File terlalu besar. Maksimal 5MB.');
       return;
     }
 
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
     if (!allowedTypes.includes(file.type)) {
       setError('Format file tidak didukung. Gunakan JPG, PNG, GIF, WebP, atau SVG.');
+      toast.error('Format file tidak didukung.');
       return;
     }
 
@@ -46,12 +49,15 @@ export function ImageUpload({ value, onChange, label = 'Image', previewClassName
       if (response.ok) {
         const data = await response.json();
         onChange(data.url);
+        toast.success('Upload berhasil!');
       } else {
         const data = await response.json().catch(() => null);
         setError(data?.message ?? 'Upload gagal. Coba lagi.');
+        toast.error(data?.message ?? 'Upload gagal. Coba lagi.');
       }
     } catch {
       setError('Upload gagal. Periksa koneksi internet.');
+      toast.error('Upload gagal. Periksa koneksi internet.');
     } finally {
       setUploading(false);
       // Reset input so same file can be re-selected

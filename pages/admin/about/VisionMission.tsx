@@ -2,11 +2,13 @@ import { AdminLayout } from '../../../components/AdminLayout';
 import { Save } from 'lucide-react';
 import { useAdminContent } from '../../../hooks/useAdminContent';
 import { ImageUpload } from '../../../components/ImageUpload';
+import { GradientPicker } from '../../../components/GradientPicker';
 
 export function AdminAboutVisionMission() {
   const defaultData = {
     title: 'Vision & Mission',
     heroImage: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40',
+    heroGradient: 'green',
     vision:
       'To be the leading Internet Service Provider in Indonesia, empowering businesses with world-class connectivity solutions and driving digital transformation across the nation.',
     mission: [
@@ -87,6 +89,9 @@ export function AdminAboutVisionMission() {
                   onChange={(url) => setFormData({ ...formData, heroImage: url })}
                   label="Hero Image"
                 />
+              </div>
+              <div>
+                <GradientPicker value={formData.heroGradient ?? 'green'} onChange={(v) => setFormData({ ...formData, heroGradient: v })} />
               </div>
             </div>
           </div>

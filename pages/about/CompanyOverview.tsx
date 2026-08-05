@@ -1,6 +1,7 @@
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 import { Globe, Users, Award, TrendingUp } from 'lucide-react';
 import { usePageContent } from '../../hooks/usePageContent';
+import { getHeroGradient } from '../../components/HeroGradient';
 
 export function CompanyOverview() {
   const content = usePageContent('about-company-overview', {
@@ -29,10 +30,10 @@ export function CompanyOverview() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-20">
+      <section className={`${getHeroGradient((content as any).heroGradient)} text-white py-20`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-5xl mb-6">{content.title}</h1>
+            <h1 className="font-bold text-4xl lg:text-5xl mb-6">{content.title}</h1>
             <p className="text-xl opacity-90">{content.subtitle}</p>
           </div>
         </div>
@@ -43,7 +44,7 @@ export function CompanyOverview() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
             <div>
-              <h2 className="text-3xl mb-6">About SuperCorridor</h2>
+              <h2 className="font-bold text-3xl mb-6">About SuperCorridor</h2>
               <p className="text-gray-600 mb-4">{content.companyDescription}</p>
               {(content.additionalDescription ?? '').split('\n\n').filter(Boolean).map((paragraph, index) => (
                 <p key={index} className="text-gray-600 mb-4">{paragraph}</p>
@@ -53,7 +54,7 @@ export function CompanyOverview() {
               <ImageWithFallback
                 src={(content as any).heroImage || 'https://images.unsplash.com/photo-1674981208693-de5a9c4c4f44?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvZmZpY2UlMjBidWlsZGluZyUyMG1vZGVybnxlbnwxfHx8fDE3NjczMjAwMzB8MA&ixlib=rb-4.1.0&q=80&w=1080'}
                 alt="SuperCorridor Office"
-                className="rounded-lg shadow-xl"
+                className="rounded-lg"
               />
             </div>
           </div>
@@ -81,7 +82,7 @@ export function CompanyOverview() {
 
           {/* Core Values */}
           <div>
-            <h2 className="text-3xl mb-8 text-center">Our Core Values</h2>
+            <h2 className="font-bold text-3xl mb-8 text-center">Our Core Values</h2>
             <div className="grid md:grid-cols-3 gap-8">
               {(content.values ?? []).map((value, index) => {
                 const color = colorCycle[index % 3];

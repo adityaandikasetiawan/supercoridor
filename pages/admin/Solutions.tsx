@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Plus, Edit, Trash2, Save, ArrowLeft, Eye, EyeOff, Network } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiFetch } from '../../utils/storage';
 import { ImageUpload } from '../../components/ImageUpload';
+import { GradientPicker } from '../../components/GradientPicker';
 
 interface SolutionPage {
   id: string;
@@ -10,6 +12,7 @@ interface SolutionPage {
   title: string;
   subtitle: string;
   heroImage: string;
+  heroGradient: string;
   description: string;
   features: { title: string; description: string }[];
   packages: { name: string; speed: string; price: string; features: string[] }[];
@@ -119,29 +122,54 @@ export function AdminSolutions() {
     });
     if (res.ok) {
       // Also save each individual solution page for the public pages to read
+      // We merge with existing data so we don't overwrite public-page-specific fields
       for (const sol of updatedSolutions) {
+        // First fetch existing data for this solution
+        let existingData: Record<string, unknown> = {};
+        try {
+          const existingRes = await apiFetch(`/api/admin/content/pages/solutions-${sol.slug}`, { method: 'GET' });
+          if (existingRes.ok) {
+            const existingJson = await existingRes.json();
+            if (existingJson.data && typeof existingJson.data === 'object') {
+              existingData = existingJson.data;
+            }
+          }
+        } catch {
+          // ignore - will just save fresh data
+        }
+
+        // Merge: admin fields override, but keep other fields (useCases, ctaTitle, etc.)
         await apiFetch(`/api/admin/content/pages/solutions-${sol.slug}`, {
           method: 'PUT',
           body: JSON.stringify({
             data: {
+              ...existingData,
               title: sol.title,
               subtitle: sol.subtitle,
               heroImage: sol.heroImage,
+              heroGradient: sol.heroGradient,
               description: sol.description,
               features: sol.features,
               packages: sol.packages,
+              published: sol.published,
             },
           }),
         });
       }
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
+      toast.success('Solutions berhasil disimpan!');
+    } else {
+      toast.error('Gagal menyimpan solutions.');
     }
   };
 
   const handleSaveEdit = async () => {
     if (!editingSolution) return;
-    const updated = solutions.map((s) => (s.id === editingSolution.id ? editingSolution : s));
+    const exists = solutions.find((s) => s.id === editingSolution.id);
+    const updated = exists
+      ? solutions.map((s) => (s.id === editingSolution.id ? editingSolution : s))
+      : [...solutions, editingSolution];
     setSolutions(updated);
     await saveAll(updated);
     setEditingSolution(null);
@@ -154,6 +182,7 @@ export function AdminSolutions() {
       title: 'New Solution',
       subtitle: 'Solution subtitle',
       heroImage: '',
+      heroGradient: 'orange',
       description: 'Solution description',
       features: [{ title: 'Feature 1', description: 'Description' }],
       packages: [],
@@ -263,6 +292,9 @@ export function AdminSolutions() {
                     label="Hero Image"
                     previewClassName="w-full h-24 object-cover rounded-lg"
                   />
+                </div>
+                <div>
+                  <GradientPicker value={editingSolution.heroGradient ?? 'orange'} onChange={(v) => setEditingSolution({ ...editingSolution, heroGradient: v })} />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-700 mb-1">Description</label>

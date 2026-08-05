@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Plus, Edit, Trash2, Save, ArrowLeft, Eye, EyeOff, Cpu } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiFetch } from '../../utils/storage';
 import { ImageUpload } from '../../components/ImageUpload';
+import { GradientPicker } from '../../components/GradientPicker';
 
 interface TechnologyPage {
   id: string;
@@ -10,6 +12,7 @@ interface TechnologyPage {
   title: string;
   subtitle: string;
   heroImage: string;
+  heroGradient: string;
   description: string;
   features: { title: string; description: string }[];
   published: boolean;
@@ -90,14 +93,55 @@ export function AdminTechnology() {
       method: 'PUT',
       body: JSON.stringify({ data: { technologies: updated } }),
     });
+
+    // Also save each technology to its individual solutions page key
+    // so public pages can read from solutions-{slug}
+    for (const tech of updated) {
+      if (tech.slug) {
+        const pageKey = `solutions-${tech.slug}`;
+        await apiFetch(`/api/admin/content/pages/${pageKey}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            data: {
+              title: tech.title,
+              subtitle: tech.subtitle,
+              heroImage: tech.heroImage,
+              heroGradient: tech.heroGradient,
+              description: tech.description,
+              features: tech.features,
+              published: tech.published,
+            },
+          }),
+        });
+      }
+    }
+
     if (res.ok) {
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
+      toast.success('Technology berhasil disimpan!');
+    } else {
+      toast.error('Gagal menyimpan technology.');
     }
   };
 
   const handleSaveEdit = async () => {
     if (!editingTech) return;
+    // Validasi: title dan slug wajib diisi
+    if (!editingTech.title.trim()) {
+      toast.error('Title wajib diisi.');
+      return;
+    }
+    if (!editingTech.slug.trim()) {
+      toast.error('Slug wajib diisi agar bisa tampil di menu dan diakses publik.');
+      return;
+    }
+    // Slug harus valid (huruf kecil, angka, dash)
+    const slugRegex = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+    if (!slugRegex.test(editingTech.slug.trim())) {
+      toast.error('Slug hanya boleh huruf kecil, angka, dan dash (contoh: dwdm, sd-wan).');
+      return;
+    }
     const exists = technologies.find((t) => t.id === editingTech.id);
     const updated = exists
       ? technologies.map((t) => (t.id === editingTech.id ? editingTech : t))
@@ -166,15 +210,16 @@ export function AdminTechnology() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-gray-700 mb-1">Title</label>
-                    <input type="text" value={editingTech.title} onChange={(e) => setEditingTech({ ...editingTech, title: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                    <label className="block text-sm text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
+                    <input type="text" value={editingTech.title} onChange={(e) => setEditingTech({ ...editingTech, title: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" placeholder="Nama technology" />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-700 mb-1">URL Slug</label>
+                    <label className="block text-sm text-gray-700 mb-1">URL Slug <span className="text-red-500">*</span></label>
                     <div className="flex items-center">
                       <span className="text-sm text-gray-500 mr-1">/solutions/</span>
-                      <input type="text" value={editingTech.slug} onChange={(e) => setEditingTech({ ...editingTech, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" placeholder="my-technology" />
+                      <input type="text" value={editingTech.slug} onChange={(e) => setEditingTech({ ...editingTech, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" placeholder="contoh: dwdm, sd-wan" />
                     </div>
+                    <p className="text-xs text-gray-400 mt-1">Wajib diisi agar tampil di menu Technology</p>
                   </div>
                 </div>
                 <div>
@@ -183,6 +228,9 @@ export function AdminTechnology() {
                 </div>
                 <div>
                   <ImageUpload value={editingTech.heroImage} onChange={(url) => setEditingTech({ ...editingTech, heroImage: url })} label="Hero Image" previewClassName="w-full h-24 object-cover rounded-lg" />
+                </div>
+                <div>
+                  <GradientPicker value={editingTech.heroGradient ?? 'blue'} onChange={(v) => setEditingTech({ ...editingTech, heroGradient: v })} />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-700 mb-1">Description</label>
@@ -203,7 +251,7 @@ export function AdminTechnology() {
                   <div key={index} className="flex gap-3 items-start border border-gray-200 rounded-lg p-3">
                     <div className="flex-1 space-y-2">
                       <input type="text" placeholder="Feature title" value={feature.title} onChange={(e) => { const f = [...editingTech.features]; f[index] = { ...f[index], title: e.target.value }; setEditingTech({ ...editingTech, features: f }); }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm" />
-                      <input type="text" placeholder="Feature description" value={feature.description} onChange={(e) => { const f = [...editingTech.features]; f[index] = { ...f[index], description: e.target.value }; setEditingTech({ ...editingTech, features: f }); }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm" />
+                      <textarea placeholder="Feature description (gunakan Enter untuk poin baru)" value={feature.description} onChange={(e) => { const f = [...editingTech.features]; f[index] = { ...f[index], description: e.target.value }; setEditingTech({ ...editingTech, features: f }); }} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm resize-y" />
                     </div>
                     <button onClick={() => setEditingTech({ ...editingTech, features: editingTech.features.filter((_, i) => i !== index) })} className="p-2 text-red-400 hover:text-red-600">
                       <Trash2 className="w-4 h-4" />

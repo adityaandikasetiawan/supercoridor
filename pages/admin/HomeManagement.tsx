@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Save, Plus, Trash2, MoveUp, MoveDown } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiFetch } from '../../utils/storage';
 import { ImageUpload } from '../../components/ImageUpload';
 
@@ -34,7 +35,7 @@ export function AdminHomeManagement() {
       subtitle: 'Across Indonesia',
       description: 'Enterprise-grade internet solutions with 99.99% uptime guarantee',
       ctaText: 'Get Started',
-      ctaLink: '/contact',
+      ctaLink: '/contact-us',
       backgroundImage: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80',
       order: 1,
     },
@@ -118,6 +119,9 @@ export function AdminHomeManagement() {
       setHeroSlides(sorted);
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
+      toast.success('Hero slides berhasil disimpan!');
+    } else {
+      toast.error('Gagal menyimpan hero slides.');
     }
   };
 
@@ -136,6 +140,9 @@ export function AdminHomeManagement() {
     if (response.ok) {
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
+      toast.success('Berhasil disimpan!');
+    } else {
+      toast.error('Gagal menyimpan. Coba lagi.');
     }
   };
 
@@ -150,7 +157,7 @@ export function AdminHomeManagement() {
         subtitle: 'Subtitle',
         description: 'Description text',
         ctaText: 'Learn More',
-        ctaLink: '/contact',
+        ctaLink: '/contact-us',
         backgroundImage: '',
         order: heroSlides.length + 1,
       },

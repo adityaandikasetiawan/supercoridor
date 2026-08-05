@@ -224,6 +224,26 @@ async function writeStore(_next) {
   // No-op - individual token operations handle this
 }
 
+// --- Activity Log ---
+const MAX_ACTIVITY_LOG_ENTRIES = 500;
+
+async function logActivity(userEmail, action, details) {
+  try {
+    const logs = (await getContentValue('activityLog')) ?? [];
+    const entry = {
+      id: crypto.randomBytes(8).toString('hex'),
+      user: userEmail ?? 'System',
+      action,
+      details: details ?? '',
+      timestamp: new Date().toISOString(),
+    };
+    const updated = [entry, ...logs].slice(0, MAX_ACTIVITY_LOG_ENTRIES);
+    await setContentValue('activityLog', updated);
+  } catch {
+    // non-critical - don't break the request
+  }
+}
+
 async function revokeAllRefreshTokensForUser(userId) {
   await revokeAllUserTokens(userId, nowMs());
 }
@@ -254,7 +274,7 @@ function defaultHeroSlides() {
       subtitle: 'Across Indonesia',
       description: 'Enterprise-grade internet solutions with 99.99% uptime guarantee',
       ctaText: 'Get Started',
-      ctaLink: '/contact',
+      ctaLink: '/contact-us',
       backgroundImage: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80',
       order: 1,
     },
@@ -415,50 +435,7 @@ function defaultCustomersData() {
 }
 
 function defaultCareersApplications() {
-  return [
-    {
-      id: '1',
-      applicantName: 'John Doe',
-      email: 'john.doe@email.com',
-      phone: '+62 812 3456 7890',
-      location: 'Jakarta, Indonesia',
-      jobTitle: 'Network Engineer',
-      jobId: '1',
-      appliedDate: '2024-01-20',
-      resumeUrl: '#',
-      coverLetter: 'I am writing to express my strong interest in the Network Engineer position...',
-      status: 'new',
-      experience: '5 years',
-    },
-    {
-      id: '2',
-      applicantName: 'Jane Smith',
-      email: 'jane.smith@email.com',
-      phone: '+62 813 9876 5432',
-      location: 'Surabaya, Indonesia',
-      jobTitle: 'Sales Manager',
-      jobId: '2',
-      appliedDate: '2024-01-19',
-      resumeUrl: '#',
-      coverLetter: 'With over 7 years of experience in B2B sales, I am excited to apply...',
-      status: 'reviewed',
-      experience: '7 years',
-    },
-    {
-      id: '3',
-      applicantName: 'Ahmad Rahman',
-      email: 'ahmad.rahman@email.com',
-      phone: '+62 815 1234 5678',
-      location: 'Bandung, Indonesia',
-      jobTitle: 'Network Engineer',
-      jobId: '1',
-      appliedDate: '2024-01-18',
-      resumeUrl: '#',
-      coverLetter: 'I am passionate about network infrastructure and would love to contribute...',
-      status: 'shortlisted',
-      experience: '6 years',
-    },
-  ];
+  return [];
 }
 
 function validateTGCSData(input) {
@@ -768,9 +745,7 @@ function validateCareersApplicationCreate(input) {
     !educationLevel ||
     !institution ||
     !major ||
-    !expectedSalary ||
-    !emergencyName ||
-    !emergencyPhone
+    !expectedSalary
   ) {
     return null;
   }
@@ -869,6 +844,36 @@ function validateHomeManagement(input) {
 
   const result = { heroData: { title, subtitle, ctaText, ctaLink, backgroundImage }, stats: nextStats };
   if (nextFeatures && nextFeatures.length > 0) result.features = nextFeatures;
+
+  // Solutions section (optional)
+  if (input.solutionsSection && typeof input.solutionsSection === 'object') {
+    const ss = input.solutionsSection;
+    const parsedSS = {
+      title: typeof ss.title === 'string' ? ss.title : '',
+      subtitle: typeof ss.subtitle === 'string' ? ss.subtitle : '',
+    };
+    // Parse small and enterprise tabs
+    for (const tab of ['small', 'enterprise']) {
+      const t = ss[tab];
+      if (!t || typeof t !== 'object') continue;
+      parsedSS[tab] = {
+        featuredBadge: typeof t.featuredBadge === 'string' ? t.featuredBadge : '',
+        featuredTitle: typeof t.featuredTitle === 'string' ? t.featuredTitle : '',
+        featuredDesc:  typeof t.featuredDesc  === 'string' ? t.featuredDesc  : '',
+        featuredLink:  typeof t.featuredLink  === 'string' ? t.featuredLink  : '',
+        image:         typeof t.image         === 'string' ? t.image         : '',
+        cards: Array.isArray(t.cards) ? t.cards.map(c => ({
+          title: typeof c.title === 'string' ? c.title : '',
+          desc:  typeof c.desc  === 'string' ? c.desc  : '',
+          link:  typeof c.link  === 'string' ? c.link  : '',
+          icon:  typeof c.icon  === 'string' ? c.icon  : '',
+          badge: typeof c.badge === 'string' ? c.badge : '',
+        })) : [],
+      };
+    }
+    result.solutionsSection = parsedSS;
+  }
+
   return result;
 }
 
@@ -933,7 +938,8 @@ function recordFailedAttempt(lockKey) {
   const failedAttempts = (state.failedAttempts ?? 0) + 1;
   const shouldLock = failedAttempts >= MAX_FAILED_ATTEMPTS;
   const lockUntil = shouldLock ? nowMs() + LOCKOUT_MS : null;
-  const next = { failedAttempts, lockUntil };
+  const remainingAttempts = shouldLock ? 0 : MAX_FAILED_ATTEMPTS - failedAttempts;
+  const next = { failedAttempts, lockUntil, remainingAttempts };
   failedLoginState.set(lockKey, next);
   return next;
 }
@@ -947,7 +953,9 @@ function requireOriginForUnsafeMethods(req, res, next) {
   const method = req.method.toUpperCase();
   if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return next();
   const origin = req.headers.origin;
-  if (typeof origin === 'string' && isAllowedOrigin(origin)) return next();
+  // Same-origin requests don't send Origin header — allow them
+  if (!origin) return next();
+  if (isAllowedOrigin(origin)) return next();
   return res.status(403).json({ ok: false, error: 'ORIGIN_NOT_ALLOWED' });
 }
 
@@ -957,6 +965,10 @@ function requireCsrf(req, res, next) {
 
   const path = req.path;
   if (path === '/api/auth/login' || path === '/api/auth/refresh' || path === '/api/auth/logout' || path === '/api/auth/csrf') {
+    return next();
+  }
+  // Public form submissions (no login required)
+  if (path === '/api/contact' || path.startsWith('/api/events/') && path.endsWith('/register')) {
     return next();
   }
 
@@ -1008,6 +1020,23 @@ const requireSalesAdmin = requireAnyRole(['super_admin', 'sales_admin']);
 const requireSalesAny = requireAnyRole(['super_admin', 'sales_admin', 'sales']);
 
 app.set('trust proxy', true);
+app.set('etag', false);
+
+// Serve frontend static files FIRST (before any auth/csrf middleware)
+const DIST_DIR = path.resolve(import.meta.dirname ?? '.', '..', 'dist');
+app.use(express.static(DIST_DIR, {
+  etag: false,
+  lastModified: false,
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else {
+      // JS/CSS files have content hash in name, can be cached long-term
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }
+}));
+
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(
@@ -1117,36 +1146,59 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
 
     const account = accounts.find((a) => a.aliases.includes(email)) ?? null;
 
+    // If not a built-in account, check dynamic users from adminUsers
+    let dynamicUser = null;
     if (!account) {
+      const adminUsers = (await getContentValue('adminUsers')) ?? [];
+      dynamicUser = adminUsers.find((u) => u.email && u.email.toLowerCase() === email && u.active !== false);
+    }
+
+    if (!account && !dynamicUser) {
       const next = recordFailedAttempt(lockKey);
       if (next.lockUntil) {
         return res.status(423).json({ ok: false, error: 'LOCKED', lockUntil: next.lockUntil });
       }
-      return res.status(401).json({ ok: false, error: 'INVALID_CREDENTIALS' });
+      return res.status(401).json({ ok: false, error: 'INVALID_CREDENTIALS', remainingAttempts: next.remainingAttempts });
     }
 
-    const passwordOk =
-      account.passwordHash
-        ? await bcrypt.compare(password, account.passwordHash)
-        : account.passwordPlain
-          ? password === account.passwordPlain
-          : password === account.devFallbackPassword;
+    let passwordOk = false;
+
+    if (account) {
+      // Check passwordOverrides from content store first (set via change-password)
+      const store = await readContentStore();
+      const overrideHash = (store.passwordOverrides ?? {})[account.id];
+
+      passwordOk = overrideHash
+        ? await bcrypt.compare(password, overrideHash)
+        : account.passwordHash
+          ? await bcrypt.compare(password, account.passwordHash)
+          : account.passwordPlain
+            ? password === account.passwordPlain
+            : password === account.devFallbackPassword;
+    } else if (dynamicUser) {
+      // Dynamic user - check passwordHash stored in adminUsers
+      if (dynamicUser.passwordHash) {
+        passwordOk = await bcrypt.compare(password, dynamicUser.passwordHash);
+      }
+    }
 
     if (!passwordOk) {
       const next = recordFailedAttempt(lockKey);
       if (next.lockUntil) {
         return res.status(423).json({ ok: false, error: 'LOCKED', lockUntil: next.lockUntil });
       }
-      return res.status(401).json({ ok: false, error: 'INVALID_CREDENTIALS' });
+      return res.status(401).json({ ok: false, error: 'INVALID_CREDENTIALS', remainingAttempts: next.remainingAttempts });
     }
 
     resetLockState(lockKey);
 
-    const user = { id: account.id, email: account.email, name: account.name, role: account.role };
+    const user = account
+      ? { id: account.id, email: account.email, name: account.name, role: account.role }
+      : { id: dynamicUser.id, email: dynamicUser.email, name: dynamicUser.name, role: dynamicUser.role };
 
     // Load permissions for this user
     const adminUsers = (await getContentValue('adminUsers')) ?? [];
-    const dbUser = adminUsers.find(u => u.id === account.id || u.email === account.email);
+    const dbUser = adminUsers.find(u => u.id === user.id || u.email === user.email);
     if (dbUser?.permissions) user.permissions = dbUser.permissions;
 
     const accessToken = signAccessToken(user);
@@ -1167,6 +1219,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     const csrfToken = crypto.randomBytes(32).toString('base64url');
     res.cookie('csrf_token', csrfToken, csrfCookieOptions(2 * 60 * 60 * 1000));
 
+    await logActivity(user.email, 'Logged in', '');
     return res.json({ ok: true, user });
   } catch {
     return res.status(500).json({ ok: false, error: 'INTERNAL' });
@@ -1317,16 +1370,22 @@ app.post('/api/auth/solusi-token', requireAuth, requireSalesAny, (req, res) => {
 });
 
 app.get('/api/content/tgcs', async (_req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
   const tgcs = await getContentValue('tgcs') ?? defaultTGCSData();
   res.json({ ok: true, tgcs });
 });
 
 app.get('/api/content/hero-slides', async (_req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
   const heroSlides = await getContentValue('heroSlides') ?? defaultHeroSlides();
   res.json({ ok: true, heroSlides });
 });
 
 app.get('/api/content/home-management', async (_req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
   const homeManagement = await getContentValue('homeManagement') ?? null;
   res.json({ ok: true, homeManagement });
 });
@@ -1435,6 +1494,7 @@ app.put('/api/admin/content/tgcs', requireAuth, requireContentAdmin, async (req,
   const tgcs = validateTGCSData(req.body?.tgcs);
   if (!tgcs) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
   await setContentValue('tgcs', tgcs);
+  await logActivity(req.auth.email, 'Updated content', 'Subsea Cable System');
   res.json({ ok: true });
 });
 
@@ -1447,6 +1507,7 @@ app.put('/api/admin/content/hero-slides', requireAuth, requireContentAdmin, asyn
   const heroSlides = validateHeroSlides(req.body?.heroSlides);
   if (!heroSlides) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
   await setContentValue('heroSlides', heroSlides);
+  await logActivity(req.auth.email, 'Updated content', 'Hero Slides');
   res.json({ ok: true });
 });
 
@@ -1459,6 +1520,7 @@ app.put('/api/admin/content/home-management', requireAuth, requireContentAdmin, 
   const homeManagement = validateHomeManagement(req.body?.homeManagement);
   if (!homeManagement) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
   await setContentValue('homeManagement', homeManagement);
+  await logActivity(req.auth.email, 'Updated content', 'Home Management');
   res.json({ ok: true });
 });
 
@@ -1477,6 +1539,7 @@ app.put('/api/admin/content/resources/insights', requireAuth, requireContentAdmi
     await writeContentStore({ ...store, resourcesInsights: articles, resourcesInsightsUpdatedAt: nowMs() });
   });
 
+  await logActivity(req.auth.email, "Updated content", "Resources Insights");
   res.json({ ok: true });
 });
 
@@ -1497,6 +1560,8 @@ app.put('/api/admin/content/resources/case-studies', requireAuth, requireContent
       resourcesCaseStudies: caseStudies,
       resourcesCaseStudiesUpdatedAt: nowMs(),
     });
+
+  await logActivity(req.auth.email, "Updated content", "Resources Case Studies");
   });
 
   res.json({ ok: true });
@@ -1517,6 +1582,7 @@ app.put('/api/admin/content/resources/faq', requireAuth, requireContentAdmin, as
     await writeContentStore({ ...store, resourcesFAQ: faqs, resourcesFAQUpdatedAt: nowMs() });
   });
 
+  await logActivity(req.auth.email, "Updated content", "Resources FAQ");
   res.json({ ok: true });
 });
 
@@ -1535,6 +1601,7 @@ app.put('/api/admin/content/careers/jobs', requireAuth, requireHrAdmin, async (r
     await writeContentStore({ ...store, careersJobs: jobs, careersJobsUpdatedAt: nowMs() });
   });
 
+  await logActivity(req.auth.email, "Updated content", "Careers Jobs");
   res.json({ ok: true });
 });
 
@@ -1556,7 +1623,7 @@ app.put('/api/admin/content/careers/applications', requireAuth, requireHrAdmin, 
       careersApplicationsUpdatedAt: nowMs(),
     });
   });
-
+  await logActivity(req.auth.email, "Updated content", "Careers Applications");
   res.json({ ok: true });
 });
 
@@ -1642,8 +1709,8 @@ app.put('/api/admin/content/customers', requireAuth, requireContentAdmin, async 
       customers: { customers: customersList, testimonials: testimonialsList },
       customersUpdatedAt: nowMs(),
     });
+  await logActivity(req.auth.email, "Updated content", "Customers");
   });
-
   res.json({ ok: true });
 });
 
@@ -1703,6 +1770,7 @@ app.post('/api/admin/users/create', requireAuth, requireSuperAdmin, async (req, 
   const updatedUsers = [...users, newUser];
   await setContentValue('adminUsers', updatedUsers);
 
+  await logActivity(req.auth.email, 'Created user', newUser.email);
   res.json({ ok: true, user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role, permissions: newUser.permissions, active: newUser.active, createdAt: newUser.createdAt } });
 });
 
@@ -1749,6 +1817,7 @@ app.post('/api/admin/users/update', requireAuth, requireSuperAdmin, async (req, 
   updatedUsers[userIndex] = updatedUser;
   await setContentValue('adminUsers', updatedUsers);
 
+  await logActivity(req.auth.email, "Updated user", updatedUser.email);
   res.json({ ok: true, user: { id: updatedUser.id, email: updatedUser.email, name: updatedUser.name, role: updatedUser.role, permissions: updatedUser.permissions, active: updatedUser.active, createdAt: updatedUser.createdAt } });
 });
 
@@ -1762,10 +1831,10 @@ app.post('/api/admin/users/delete', requireAuth, requireSuperAdmin, async (req, 
   }
 
   const users = (await getContentValue('adminUsers')) ?? [];
+  await logActivity(req.auth.email, "Deleted user", id);
   const updatedUsers = users.filter((u) => u.id !== id);
   await setContentValue('adminUsers', updatedUsers);
 
-  res.json({ ok: true });
 });
 
 // --- Image Upload ---
@@ -1859,10 +1928,10 @@ app.put('/api/admin/content/contact-messages', requireAuth, requireContentAdmin,
 
   await withContentWrite(async () => {
     const store = await readContentStore();
+  await logActivity(req.auth.email, "Updated content", "Contact Messages");
     await writeContentStore({ ...store, contactMessages: messages, contactMessagesUpdatedAt: nowMs() });
   });
 
-  res.json({ ok: true });
 });
 
 // Public contact form submission
@@ -1925,6 +1994,12 @@ function validateNetworkCoverage(input) {
   const totalCities = typeof input.totalCities === 'number' ? input.totalCities : null;
   if (!title || !description || totalPops === null || totalCities === null) return null;
 
+  // Map source fields
+  const mapEmbedUrl = typeof input.mapEmbedUrl === 'string' ? input.mapEmbedUrl : '';
+  const mapImage = typeof input.mapImage === 'string' ? input.mapImage : '';
+  const mapApiKey = typeof input.mapApiKey === 'string' ? input.mapApiKey : '';
+
+  // Cities — include optional map overlay fields (x, y, iconType, iconColor, connectionType)
   const cities = [];
   if (Array.isArray(input.cities)) {
     for (const c of input.cities) {
@@ -1936,11 +2011,80 @@ function validateNetworkCoverage(input) {
       const status = typeof c.status === 'string' ? c.status : null;
       if (!id || !name || !province || pops === null || !status) return null;
       if (status !== 'active' && status !== 'coming-soon') return null;
-      cities.push({ id, name, province, pops, status });
+      const city = { id, name, province, pops, status };
+      // Optional map overlay fields
+      if (typeof c.x === 'number') city.x = c.x;
+      if (typeof c.y === 'number') city.y = c.y;
+      if (typeof c.iconType === 'string') city.iconType = c.iconType;
+      if (typeof c.iconColor === 'string') city.iconColor = c.iconColor;
+      if (typeof c.connectionType === 'string') city.connectionType = c.connectionType;
+      cities.push(city);
     }
   }
 
-  return { title, description, totalPops, totalCities, cities };
+  // Routes
+  const routes = [];
+  if (Array.isArray(input.routes)) {
+    for (const r of input.routes) {
+      if (!r || typeof r !== 'object') continue;
+      if (typeof r.id !== 'string' || typeof r.fromCityId !== 'string' || typeof r.toCityId !== 'string' || typeof r.type !== 'string') continue;
+      const waypoints = Array.isArray(r.waypoints)
+        ? r.waypoints.filter(wp => wp && typeof wp.x === 'number' && typeof wp.y === 'number').map(wp => ({ x: wp.x, y: wp.y }))
+        : [];
+      routes.push({ id: r.id, fromCityId: r.fromCityId, toCityId: r.toCityId, type: r.type, waypoints });
+    }
+  }
+
+  // Legend
+  const legend = [];
+  if (Array.isArray(input.legend)) {
+    for (const l of input.legend) {
+      if (!l || typeof l !== 'object') continue;
+      if (typeof l.id !== 'string' || typeof l.label !== 'string') continue;
+      legend.push({
+        id: l.id,
+        label: l.label,
+        lineType: typeof l.lineType === 'string' ? l.lineType : 'solid',
+        color: typeof l.color === 'string' ? l.color : '#3B82F6',
+      });
+    }
+  }
+
+  // Stats
+  const stats = [];
+  if (Array.isArray(input.stats)) {
+    for (const s of input.stats) {
+      if (!s || typeof s !== 'object') continue;
+      stats.push({
+        id: typeof s.id === 'string' ? s.id : String(Math.random()),
+        value: typeof s.value === 'string' ? s.value : '',
+        label: typeof s.label === 'string' ? s.label : '',
+        color: typeof s.color === 'string' ? s.color : 'blue',
+      });
+    }
+  }
+
+  // Infrastructure cards
+  const infrastructure = [];
+  if (Array.isArray(input.infrastructure)) {
+    for (const card of input.infrastructure) {
+      if (!card || typeof card !== 'object') continue;
+      infrastructure.push({
+        id: typeof card.id === 'string' ? card.id : String(Math.random()),
+        title: typeof card.title === 'string' ? card.title : '',
+        color: typeof card.color === 'string' ? card.color : 'blue',
+        items: Array.isArray(card.items) ? card.items.filter(i => typeof i === 'string') : [],
+      });
+    }
+  }
+
+  return {
+    title, description, totalPops, totalCities,
+    mapEmbedUrl, mapImage, mapApiKey,
+    cities, routes, legend,
+    ...(stats.length > 0 && { stats }),
+    ...(infrastructure.length > 0 && { infrastructure }),
+  };
 }
 
 app.get('/api/admin/content/network-coverage', requireAuth, requireContentAdmin, async (_req, res) => {
@@ -1954,10 +2098,10 @@ app.put('/api/admin/content/network-coverage', requireAuth, requireContentAdmin,
   if (!networkCoverage) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
 
   await withContentWrite(async () => {
+  await logActivity(req.auth.email, "Updated content", "Network Coverage");
     const store = await readContentStore();
     await writeContentStore({ ...store, networkCoverage, networkCoverageUpdatedAt: nowMs() });
   });
-
   res.json({ ok: true });
 });
 
@@ -1989,6 +2133,49 @@ function validateSettings(input) {
       phone: typeof input.website.phone === 'string' ? input.website.phone : '',
       email: typeof input.website.email === 'string' ? input.website.email : '',
       address: typeof input.website.address === 'string' ? input.website.address : '',
+      logo: typeof input.website.logo === 'string' ? input.website.logo : '',
+      favicon: typeof input.website.favicon === 'string' ? input.website.favicon : '',
+    };
+  }
+
+  if (input.social && typeof input.social === 'object') {
+    if (Array.isArray(input.social)) {
+      // New format: array of { name, url, icon }
+      result.social = input.social
+        .filter((item) => item && typeof item === 'object')
+        .map((item) => ({
+          name: typeof item.name === 'string' ? item.name : '',
+          url: typeof item.url === 'string' ? item.url : '',
+          icon: typeof item.icon === 'string' ? item.icon : '',
+        }));
+    } else {
+      // Legacy format: { facebook, twitter, ... }
+      result.social = {
+        facebook: typeof input.social.facebook === 'string' ? input.social.facebook : '',
+        twitter: typeof input.social.twitter === 'string' ? input.social.twitter : '',
+        linkedin: typeof input.social.linkedin === 'string' ? input.social.linkedin : '',
+        instagram: typeof input.social.instagram === 'string' ? input.social.instagram : '',
+        youtube: typeof input.social.youtube === 'string' ? input.social.youtube : '',
+        whatsapp: typeof input.social.whatsapp === 'string' ? input.social.whatsapp : '',
+      };
+    }
+  }
+
+  if (input.seo && typeof input.seo === 'object') {
+    result.seo = {
+      metaTitle: typeof input.seo.metaTitle === 'string' ? input.seo.metaTitle : '',
+      metaDescription: typeof input.seo.metaDescription === 'string' ? input.seo.metaDescription : '',
+      ogImage: typeof input.seo.ogImage === 'string' ? input.seo.ogImage : '',
+      googleAnalyticsId: typeof input.seo.googleAnalyticsId === 'string' ? input.seo.googleAnalyticsId : '',
+    };
+  }
+
+  if (input.advanced && typeof input.advanced === 'object') {
+    result.advanced = {
+      maintenanceMode: typeof input.advanced.maintenanceMode === 'boolean' ? input.advanced.maintenanceMode : false,
+      maintenanceMessage: typeof input.advanced.maintenanceMessage === 'string' ? input.advanced.maintenanceMessage : '',
+      defaultLanguage: typeof input.advanced.defaultLanguage === 'string' ? input.advanced.defaultLanguage : 'id',
+      timezone: typeof input.advanced.timezone === 'string' ? input.advanced.timezone : 'Asia/Jakarta',
     };
   }
 
@@ -2001,6 +2188,15 @@ app.get('/api/admin/content/settings', requireAuth, requireAdminAny, async (_req
   res.json({ ok: true, settings });
 });
 
+// Public settings endpoint (no auth, only exposes website, social, seo)
+app.get('/api/content/settings', async (_req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  const store = await readContentStore();
+  const settings = store.settings ?? {};
+  res.json({ ok: true, settings: { website: settings.website ?? null, social: settings.social ?? null, seo: settings.seo ?? null } });
+});
+
 app.put('/api/admin/content/settings', requireAuth, requireAdminAny, async (req, res) => {
   const settings = validateSettings(req.body?.settings);
   if (!settings) return res.status(400).json({ ok: false, error: 'INVALID_INPUT' });
@@ -2011,6 +2207,7 @@ app.put('/api/admin/content/settings', requireAuth, requireAdminAny, async (req,
     await writeContentStore({ ...store, settings: { ...existing, ...settings }, settingsUpdatedAt: nowMs() });
   });
 
+  await logActivity(req.auth.email, 'Updated settings', Object.keys(settings).join(', '));
   res.json({ ok: true });
 });
 
@@ -2037,11 +2234,17 @@ app.post('/api/admin/change-password', requireAuth, requireAdminAny, async (req,
     const account = accounts.find((a) => a.id === req.auth.userId);
     if (!account) return res.status(400).json({ ok: false, error: 'INVALID_PASSWORD' });
 
-    const passwordOk = account.passwordHash
-      ? await bcrypt.compare(currentPassword, account.passwordHash)
-      : account.passwordPlain
-        ? currentPassword === account.passwordPlain
-        : currentPassword === account.devFallbackPassword;
+    // Check passwordOverrides first (previously changed passwords)
+    const currentStore = await readContentStore();
+    const currentOverrideHash = (currentStore.passwordOverrides ?? {})[account.id];
+
+    const passwordOk = currentOverrideHash
+      ? await bcrypt.compare(currentPassword, currentOverrideHash)
+      : account.passwordHash
+        ? await bcrypt.compare(currentPassword, account.passwordHash)
+        : account.passwordPlain
+          ? currentPassword === account.passwordPlain
+          : currentPassword === account.devFallbackPassword;
 
     if (!passwordOk) {
       return res.status(400).json({ ok: false, error: 'INVALID_PASSWORD' });
@@ -2054,6 +2257,7 @@ app.post('/api/admin/change-password', requireAuth, requireAdminAny, async (req,
       const store = await readContentStore();
       const passwordOverrides = store.passwordOverrides ?? {};
       passwordOverrides[req.auth.userId] = newHash;
+  await logActivity(req.auth.email, "Changed password", "");
       await writeContentStore({ ...store, passwordOverrides, passwordOverridesUpdatedAt: nowMs() });
     });
 
@@ -2079,6 +2283,111 @@ app.get('/api/admin/dashboard-stats', requireAuth, requireAdminAny, async (_req,
   res.json({ ok: true, stats });
 });
 
+// --- Activity Log ---
+app.get('/api/admin/activity-log', requireAuth, requireSuperAdmin, async (_req, res) => {
+  const logs = (await getContentValue('activityLog')) ?? [];
+  res.json({ ok: true, logs });
+});
+
+app.get('/api/admin/activity-log/export', requireAuth, requireSuperAdmin, async (_req, res) => {
+  const logs = (await getContentValue('activityLog')) ?? [];
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+  const filtered = logs.filter((l) => new Date(l.timestamp) >= oneMonthAgo);
+
+  // CSV export
+  const header = 'Timestamp,User,Action,Details\n';
+  const rows = filtered.map((l) => {
+    const ts = new Date(l.timestamp).toLocaleString('id-ID');
+    const user = (l.user ?? '').replace(/,/g, ' ');
+    const action = (l.action ?? '').replace(/,/g, ' ');
+    const details = (l.details ?? '').replace(/,/g, ' ');
+    return `"${ts}","${user}","${action}","${details}"`;
+  }).join('\n');
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="activity-log-${new Date().toISOString().slice(0, 10)}.csv"`);
+  res.send(header + rows);
+});
+
+// --- Event Registration ---
+// Public: register for an event
+app.post('/api/events/:eventId/register', async (req, res) => {
+  const { eventId } = req.params;
+  const { name, email, phone, company, notes, customFields } = req.body ?? {};
+  if (!name || !email) {
+    return res.status(400).json({ ok: false, error: 'Name and email are required' });
+  }
+
+  // Check event exists and registration is open
+  const eventsData = await getPageContent('page-events');
+  const events = eventsData?.events ?? [];
+  const event = events.find(e => e.id === eventId);
+  if (!event) return res.status(404).json({ ok: false, error: 'Event not found' });
+  if (!event.registrationOpen) return res.status(400).json({ ok: false, error: 'Registration is closed' });
+
+  // Check max participants
+  const regData = await getPageContent('event-registrations') ?? { registrations: [] };
+  const eventRegs = regData.registrations.filter(r => r.eventId === eventId);
+  if (event.maxParticipants && eventRegs.length >= event.maxParticipants) {
+    return res.status(400).json({ ok: false, error: 'Event is full' });
+  }
+
+  // Check duplicate email for same event
+  if (eventRegs.some(r => r.email.toLowerCase() === email.toLowerCase())) {
+    return res.status(400).json({ ok: false, error: 'Already registered with this email' });
+  }
+
+  const registration = {
+    id: Date.now().toString(),
+    eventId,
+    name: String(name).trim(),
+    email: String(email).trim().toLowerCase(),
+    phone: String(phone ?? '').trim(),
+    company: String(company ?? '').trim(),
+    notes: String(notes ?? '').trim(),
+    customFields: customFields && typeof customFields === 'object' ? customFields : {},
+    status: 'pending',
+    registeredAt: new Date().toISOString(),
+  };
+
+  regData.registrations.push(registration);
+  await setPageContent('event-registrations', regData);
+  res.json({ ok: true, registration: { id: registration.id } });
+});
+
+// Admin: get all registrations
+app.get('/api/admin/events/registrations', requireAuth, requireContentAdmin, async (_req, res) => {
+  const regData = await getPageContent('event-registrations') ?? { registrations: [] };
+  res.json({ ok: true, registrations: regData.registrations });
+});
+
+// Admin: update registration status
+app.put('/api/admin/events/registrations/:id', requireAuth, requireContentAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body ?? {};
+  if (!status || !['pending', 'confirmed', 'rejected'].includes(status)) {
+    return res.status(400).json({ ok: false, error: 'Invalid status' });
+  }
+
+  const regData = await getPageContent('event-registrations') ?? { registrations: [] };
+  const idx = regData.registrations.findIndex(r => r.id === id);
+  if (idx === -1) return res.status(404).json({ ok: false, error: 'Registration not found' });
+
+  regData.registrations[idx].status = status;
+  await setPageContent('event-registrations', regData);
+  res.json({ ok: true });
+});
+
+// Admin: delete registration
+app.delete('/api/admin/events/registrations/:id', requireAuth, requireContentAdmin, async (req, res) => {
+  const { id } = req.params;
+  const regData = await getPageContent('event-registrations') ?? { registrations: [] };
+  regData.registrations = regData.registrations.filter(r => r.id !== id);
+  await setPageContent('event-registrations', regData);
+  res.json({ ok: true });
+});
+
 // --- Generic Page Content ---
 // A flexible endpoint for storing/retrieving page content by key.
 // Used by Solutions, About, and other pages that need simple content management.
@@ -2094,11 +2403,18 @@ const ALLOWED_PAGE_KEYS = new Set([
   'about-vision-mission',
   'about-leadership',
   'about-milestones',
+  'page-contact',
+  'page-customers',
+  'page-careers',
+  'page-network-coverage',
+  'page-events',
+  'page-insights',
+  'event-registrations',
 ]);
 
 app.get('/api/admin/content/pages/:key', requireAuth, requireContentAdmin, async (req, res) => {
   const key = req.params.key;
-  if (!ALLOWED_PAGE_KEYS.has(key)) {
+  if (!ALLOWED_PAGE_KEYS.has(key) && !key.startsWith('solutions-')) {
     return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
   }
   const data = await getPageContent(key);
@@ -2107,7 +2423,7 @@ app.get('/api/admin/content/pages/:key', requireAuth, requireContentAdmin, async
 
 app.put('/api/admin/content/pages/:key', requireAuth, requireContentAdmin, async (req, res) => {
   const key = req.params.key;
-  if (!ALLOWED_PAGE_KEYS.has(key)) {
+  if (!ALLOWED_PAGE_KEYS.has(key) && !key.startsWith('solutions-')) {
     return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
   }
   const data = req.body?.data;
@@ -2116,13 +2432,19 @@ app.put('/api/admin/content/pages/:key', requireAuth, requireContentAdmin, async
   }
 
   await setPageContent(key, data);
+  await logActivity(req.auth.email, 'Updated page', key);
   res.json({ ok: true });
 });
 
 // Public page content endpoint
 app.get('/api/content/pages/:key', async (req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
   const key = req.params.key;
-  if (!ALLOWED_PAGE_KEYS.has(key)) {
+  // Allow explicit keys OR any solutions-* key (for dynamic technology pages)
+  if (!ALLOWED_PAGE_KEYS.has(key) && !key.startsWith('solutions-')) {
     return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
   }
   const data = await getPageContent(key);
@@ -2134,11 +2456,30 @@ import { createEnterpriseRouter } from './enterprise/routes.mjs';
 const enterpriseRouter = createEnterpriseRouter(requireAuth, requireSalesAdmin, requireSalesAny, getContentValue, setContentValue);
 app.use('/api/enterprise', enterpriseRouter);
 
+// Maintenance page preview route
+app.get('/maintenance', (_req, res) => {
+  res.sendFile(path.resolve(import.meta.dirname ?? '.', '..', 'maintenance', 'index.html'));
+});
+
+// SPA fallback — serve index.html for all non-API routes
+app.use((_req, res) => {
+  res.sendFile(path.join(DIST_DIR, 'index.html'), {
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
+    lastModified: false,
+    etag: false,
+  });
+});
+
 // Initialize database and start server
 initDatabase().then(() => {
   app.listen(PORT, () => {
     assertProductionConfig();
     console.log(`API listening on http://localhost:${PORT}`);
+    console.log(`Frontend served from ${DIST_DIR}`);
   });
 }).catch((err) => {
   console.error('Failed to initialize database:', err.message);

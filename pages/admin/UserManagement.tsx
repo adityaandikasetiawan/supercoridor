@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
-import { Plus, Edit, Trash2, Shield, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, Shield, Save, Eye, EyeOff } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiFetch } from '../../utils/storage';
 
 // All available permissions in the system
 const ALL_PERMISSIONS = [
   { key: 'dashboard', label: 'Dashboard', group: 'General' },
   { key: 'home', label: 'Home Page', group: 'Content' },
-  { key: 'tgcs', label: 'TGCS Project', group: 'Content' },
+  { key: 'tgcs', label: 'Subsea Cable System', group: 'Content' },
   { key: 'solutions', label: 'Solutions', group: 'Content' },
   { key: 'technology', label: 'Technology', group: 'Content' },
   { key: 'about', label: 'About Us', group: 'Content' },
@@ -71,6 +72,8 @@ export function UserManagement() {
     active: true,
     permissions: ROLE_TEMPLATES.content as PermissionKey[],
   });
+
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -174,9 +177,11 @@ export function UserManagement() {
       setIsModalOpen(false);
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
+      toast.success(editingUser ? 'User berhasil diupdate!' : 'User berhasil dibuat!');
     } else {
       const data = await res.json().catch(() => null);
       setError(data?.error === 'EMAIL_EXISTS' ? 'Email already exists' : data?.error ?? 'Failed to save user');
+      toast.error(data?.error === 'EMAIL_EXISTS' ? 'Email sudah digunakan.' : 'Gagal menyimpan user.');
     }
   };
 
@@ -315,7 +320,12 @@ export function UserManagement() {
                     </div>
                     <div>
                       <label className="block text-sm text-gray-700 mb-1">{editingUser ? 'New Password' : 'Password *'}</label>
-                      <input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" placeholder={editingUser ? 'Leave blank to keep' : 'Min 6 characters'} />
+                      <div className="relative">
+                        <input type={showPassword ? 'text' : 'password'} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" placeholder={editingUser ? 'Leave blank to keep' : 'Min 6 characters'} />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
