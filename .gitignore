@@ -1,0 +1,5 @@
+node_modules/
+dist-link
+.env
+.env.local
+*.log
